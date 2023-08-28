@@ -49,8 +49,10 @@ const code = `
 };
 `;
 
-// const result = lex("/ 'this' test = 1");
+// const result = lex(code);
 // console.log("result is", result);
 
-const result2 = lex("/ 'this' test = 1 \n /* comment */ <cool> // some text");
+const result2 = lex(
+  '/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated'
+);
 console.log("result is", result2);
