@@ -1,0 +1,29 @@
+{
+  "name": "js-playground",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lex": "ts-node-esm -P tsconfig.json src/lexer/index.mts",
+    "start": "ts-node-esm -P tsconfig.json src/index.mts",
+    "show-configs": "ts-node-esm --showConfig",
+    "test": "jest"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "dotenv": "^16.0.3",
+    "inquirer": "^9.1.4",
+    "protocoljs": "^0.1.0",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@babel/preset-typescript": "^7.22.11",
+    "@types/jest": "^29.5.4",
+    "@types/node": "^18.14.6",
+    "ts-jest": "^29.1.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
