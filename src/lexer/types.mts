@@ -27,7 +27,15 @@ export enum TokenType {
   STRING = "STRING",
   NUMBER = "NUMBER",
 
+  // dts editable values
+  KEYMAP_ENTRIES = "KEYMAP_ENTRIES",
   // Keywords.
+  IMPORT = "IMPORT",
+  KEYMAP = "KEYMAP",
+  DEFAULT_LAYER = "default_layer",
+  BINDINGS = "bindings",
+  SENSOR_BINDINGS = "sensor_bindings",
+  COMPATIBLE = "compatible",
   // AND,
   // CLASS,
   // ELSE,

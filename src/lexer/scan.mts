@@ -1,5 +1,5 @@
 import { ErrorReporting } from "./errors.mjs";
-import { Token } from "./token.mjs";
+import { Token, keywords } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
 export class Scanner {
@@ -44,17 +44,17 @@ export class Scanner {
         this.addToken(TokenType.COMMA);
         break;
       case ";":
-        this.addToken(TokenType.SEMICOLON);
+        this.addToken(TokenType.SEMICOLON); // signifies end of statement (comments don't need it of course)
         break;
       case "=":
         this.addToken(TokenType.EQUAL);
         break;
-      case ">":
-        this.addToken(TokenType.GREATER);
-        break;
-      case "<":
-        this.addToken(TokenType.LESS);
-        break;
+      // case ">":
+      //   this.addToken(TokenType.GREATER); // in .dts its the end of a binding
+      //   break;
+      // case "<":
+      //   this.addToken(TokenType.LESS); // in .dts its the start of a binding
+      //   break;
       case "*":
         // only for multiline comment case
         // if '*/'
@@ -92,14 +92,26 @@ export class Scanner {
       case '"': // only doublequotes
         this.string();
         break;
+      case "<": // dts keymaps
+        this.keymap();
+        break;
 
       default:
         if (this.isDigit(c)) {
           this.number();
+        } else if (this.isAlpha(c)) {
+          this.identifier();
+        } else if (c === "#") {
+          this.import();
         } else {
           // Note that the erroneous character is still consumed
           // by the earlier call to advance(). That’s important
           // so that we don’t get stuck in an infinite loop.
+
+          // TODO: what there are unexpected characters, is it possible to
+          // run a sort of LLM lexer to provide a best guess
+          // of what the author was trying to write?
+          // refer to "Musings on a middle-ground Programming Language"
           const msg = `Unexpected character "${this.source[this.current - 1]}"`;
           this.error.error(this.line, msg, this.source, this.current);
         }
@@ -150,6 +162,28 @@ export class Scanner {
     const value = this.source.substring(this.start + 1, this.current - 1);
     this.addToken(TokenType.STRING, value);
   }
+  private keymap() {
+    while (this.peek() !== ">" && !this.isAtEnd()) {
+      if (this.peek() == "\n") {
+        this.line = this.line + 1;
+      }
+      this.advance();
+    }
+
+    if (this.isAtEnd()) {
+      const msg = `Unterminated keymap entries: "${this.source[this.current - 1]}"`;
+      this.error.error(this.line, msg, this.source, this.current);
+      return;
+    }
+
+    // the closing >
+    this.advance();
+
+    // trim surrounding quotes
+    const value = this.source.substring(this.start + 1, this.current - 1);
+    const cleanedValue = value.replace(/\n/g, " ").replace(/\t/g, " ").replace(/\s+/g, " ").trim();
+    this.addToken(TokenType.KEYMAP_ENTRIES, cleanedValue);
+  }
   private number() {
     while (this.isDigit(this.peek())) {
       this.advance();
@@ -167,6 +201,23 @@ export class Scanner {
 
     this.addToken(TokenType.NUMBER, parseFloat(this.source.substring(this.start, this.current)));
   }
+  private identifier() {
+    while (this.isAlphaNumeric(this.peek())) this.advance();
+
+    const text = this.source.substring(this.start, this.current);
+    let identifierType = keywords[text];
+    if (!identifierType) {
+      identifierType = TokenType.IDENTIFIER;
+    }
+    this.addToken(identifierType);
+  }
+  private import() {
+    // dts module imports.
+    while (this.peek() !== "\n" && !this.isAtEnd()) {
+      this.advance();
+    }
+    this.addToken(TokenType.IMPORT);
+  }
 
   // types
   private addToken(type: TokenType): void;
@@ -182,6 +233,12 @@ export class Scanner {
   }
   private isDigit(c: string) {
     return c >= "0" && c <= "9";
+  }
+  private isAlpha(c: string) {
+    return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_" || c == "-";
+  }
+  private isAlphaNumeric(c: string) {
+    return this.isAlpha(c) || this.isDigit(c);
   }
 }
 

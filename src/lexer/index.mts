@@ -7,6 +7,23 @@ const lex = (code) => {
 };
 
 const code = `
+/ {
+	keymap {
+		compatible = "zmk,keymap";
+		default_layer {
+				// ------------------------------------------------------------------------------------------
+				// |  \`  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  0  |  -  |  =  |   BKSP
+				// ------------------------------------------------------------------------------------------
+			bindings = <
+				&kp ESC &kp N1
+			>;
+			sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>;
+		};
+	};
+};
+`;
+
+const fullcode = `
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
@@ -49,10 +66,10 @@ const code = `
 };
 `;
 
-// const result = lex(code);
-// console.log("result is", result);
+const result = lex(fullcode);
+console.log("result is", result);
 
-const result2 = lex(
-  '/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated'
-);
-console.log("result is", result2);
+// const result2 = lex(
+//   '/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated'
+// );
+// console.log("result is", result2);

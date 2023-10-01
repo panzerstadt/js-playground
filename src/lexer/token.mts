@@ -17,3 +17,11 @@ export class Token {
     return `${this.type} ${this.lexeme} ${this.literal}`;
   }
 }
+
+export const keywords = {
+  keymap: TokenType.KEYMAP,
+  default_layer: TokenType.DEFAULT_LAYER,
+  bindings: TokenType.BINDINGS,
+  sensor_bindings: TokenType.SENSOR_BINDINGS,
+  compatible: TokenType.COMPATIBLE,
+};
