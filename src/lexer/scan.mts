@@ -2,6 +2,23 @@ import { ErrorReporting } from "./errors.mjs";
 import { Token, keywords } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
+// in the context of the dts, the scanner can tell us
+// whether the tokens have been misspelled or are not
+// in known tokens (e.g. #sensooor-binding-cells)
+// but they need to be parsed to understand relationships
+// between tokens
+
+/**
+ * in the Chomsky Hierarchy, the grammar here is called Regular Grammar
+ *
+ * This means that they don't have nested structures or dependencies
+ * that require MEMORY to recognize.
+ *
+ * Regular Expression (Regex) is a form of Regular Grammar (duh) because
+ * it doesn't keep state / doesn't allow the user of the grammar to
+ * describe something that requires 'remembering' something
+ * (e.g. remembering a variable, and then using it somewhere else)
+ */
 export class Scanner {
   source: string;
   tokens: Token[];
