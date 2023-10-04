@@ -6,11 +6,16 @@ export enum TokenType {
   RIGHT_BRACE = "RIGHT_BRACE", // node block
   COMMA = "COMMA",
   //   DOT,
-  //   MINUS,
-  //   PLUS,
+
+  // just for testing out the babyparser
+  // TODO: remove
+  MINUS = "MINUS",
+  STAR = "STAR",
+  PLUS = "PLUS",
+  // TODO: remove
+
   SEMICOLON = "SEMICOLON", // EOL
   SLASH = "SLASH", // slash is special in zephyr's dts: https://docs.zephyrproject.org/latest/build/dts/intro-syntax-structure.html
-  //   STAR,
 
   // One or two character tokens.
   //   BANG,
