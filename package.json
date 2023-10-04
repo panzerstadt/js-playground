@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "lex": "ts-node-esm -P tsconfig.json src/lexer/index.mts",
+    "expr": "ts-node-esm -P tsconfig.json src/lexer/expression.mts",
     "start": "ts-node-esm -P tsconfig.json src/index.mts",
     "show-configs": "ts-node-esm --showConfig",
     "test": "jest"
