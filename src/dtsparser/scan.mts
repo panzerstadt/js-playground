@@ -2,6 +2,8 @@ import { ScanError } from "./errors.mjs";
 import { Token, keywords } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
+// TODO: this is a subset of the scanner, applies only to dts file parsing
+
 // in the context of the dts, the scanner can tell us
 // whether the tokens have been misspelled or are not
 // in known tokens (e.g. #sensooor-binding-cells)
@@ -48,16 +50,10 @@ export class Scanner {
     return this.tokens;
   }
 
-  // crafting compilers (includes expression handling)
+  // original DTS only scan
   scanToken() {
     const c = this.advance();
     switch (c) {
-      case "(":
-        this.addToken(TokenType.LEFT_PAREN);
-        break;
-      case ")":
-        this.addToken(TokenType.RIGHT_PAREN);
-        break;
       case "{":
         this.addToken(TokenType.LEFT_BRACE);
         break;
@@ -67,42 +63,18 @@ export class Scanner {
       case ",":
         this.addToken(TokenType.COMMA);
         break;
-      case ".":
-        this.addToken(TokenType.DOT);
-        break;
-      case "-":
-        this.addToken(TokenType.MINUS);
-        break;
-      case "+":
-        this.addToken(TokenType.PLUS);
-        break;
       case ";":
         this.addToken(TokenType.SEMICOLON); // signifies end of statement (comments don't need it of course)
         break;
-      case "*":
-        this.addToken(TokenType.STAR);
-        break;
       case "=":
-        this.addToken(this.match("=") ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); // babyparser
-        break;
-      case "!":
-        this.addToken(this.match("=") ? TokenType.BANG_EQUAL : TokenType.BANG);
-        break;
-      case ">":
-        this.addToken(this.match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER);
-        break;
-      case "<":
-        this.addToken(this.match("=") ? TokenType.LESS_EQUAL : TokenType.LESS);
+        this.addToken(TokenType.EQUAL);
         break;
       case "*":
         // only for multiline comment case
         // if '*/'
         if (this.match("/")) {
           this.advance();
-        } else {
-          this.addToken(TokenType.STAR);
         }
-
         break;
       case "/":
         if (this.match("/")) {

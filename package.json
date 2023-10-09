@@ -5,6 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dts": "ts-node-esm -P tsconfig.json src/dtsparser/index.mts",
     "lex": "ts-node-esm -P tsconfig.json src/lexer/index.mts",
     "expr": "ts-node-esm -P tsconfig.json src/lexer/expression.mts",
     "start": "ts-node-esm -P tsconfig.json src/index.mts",

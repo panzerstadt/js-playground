@@ -1,5 +1,4 @@
 import { Token } from "./token.mjs";
-import { TokenType } from "./types.mjs";
 
 interface Binary {
   type: "binary";

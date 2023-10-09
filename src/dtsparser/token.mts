@@ -24,8 +24,4 @@ export const keywords = {
   bindings: TokenType.BINDINGS,
   sensor_bindings: TokenType.SENSOR_BINDINGS,
   compatible: TokenType.COMPATIBLE,
-
-  false: TokenType.FALSE,
-  true: TokenType.TRUE,
-  nil: TokenType.NIL,
 };
