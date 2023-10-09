@@ -1,6 +1,7 @@
 import { Token } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
+// Errors in lexer are SYNTAX errors
 export class ScanError {
   hadError: boolean;
   errors: string[];
@@ -67,6 +68,7 @@ const pointToErrorAt = (col: number, line: number, lines: string[]) => {
   return toStart(line) + skip(col, line) + "^-- Here.";
 };
 
+// Errors in parser are STATIC errors
 export class ParseError {
   hadError: boolean;
   errors: string[];
@@ -94,5 +96,15 @@ export class ParseError {
       console.log(e);
     });
     console.log("-----------------END-------------------");
+  }
+}
+
+// Errors in interpreter are DYNAMIC errors
+export class RuntimeError extends Error {
+  readonly token: Token;
+
+  constructor(token: Token, message: string) {
+    super(message);
+    this.token = token;
   }
 }

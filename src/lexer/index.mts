@@ -1,4 +1,5 @@
-import { printAST } from "./expression.mjs";
+import { Interpreter } from "./interpreters/interpreter.mjs";
+import { printAST } from "./interpreters/pprint.mjs";
 import { Parser } from "./parser.mjs";
 import { Scanner } from "./scan.mjs";
 
@@ -16,8 +17,10 @@ const parse = (code) => {
   }
 
   console.log(printAST(expression));
+
+  const interpreter = new Interpreter();
+  interpreter.interpret(expression);
 };
 
 // parse('/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated');
-parse("1 + 3 / (2 * 3)");
-// console.log("result is", result2);
+parse("1 + 3 / (2 * null)");
