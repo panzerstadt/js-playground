@@ -29,3 +29,7 @@ export const keywords = {
   true: TokenType.TRUE,
   nil: TokenType.NIL,
 };
+
+export const accidentalKeywords = {
+  null: "Did you mean 'nil'? This isn't Javascript you know...",
+};

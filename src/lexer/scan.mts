@@ -1,5 +1,5 @@
 import { ScanError } from "./errors.mjs";
-import { Token, keywords } from "./token.mjs";
+import { Token, accidentalKeywords, keywords } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
 // in the context of the dts, the scanner can tell us
@@ -249,6 +249,10 @@ export class Scanner {
     const text = this.source.substring(this.start, this.current);
     let identifierType = keywords[text];
     if (!identifierType) {
+      const didYouMean = accidentalKeywords[text];
+      if (!!didYouMean) {
+        this.error.error(this.line, didYouMean, this.source, this.current);
+      }
       identifierType = TokenType.IDENTIFIER;
     }
     this.addToken(identifierType);
