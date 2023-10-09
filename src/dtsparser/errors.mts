@@ -81,7 +81,7 @@ export class ParseError {
   }
 
   report(line: number, where: string, message: string) {
-    const simpleErrorMessage = `[line ${line}] Error${where}: ${message}`; // prettier-ignore
+    const simpleErrorMessage = `[line ${line}] Error ${where}: ${message}`; // prettier-ignore
 
     this.errors.push(simpleErrorMessage);
     return { error: true };

@@ -15,7 +15,7 @@ export class ScanError {
   }
 
   private report(line: number, where: string, message: string, rawLine?: string, col?: number) {
-    const simpleErrorMessage = `[line ${line}] Error${where}: ${message}${rawLine ? `RAW:${rawLine}` : ''}`; // prettier-ignore
+    const simpleErrorMessage = `[line ${line}] Error ${where}: ${message}${rawLine ? `RAW:${rawLine}` : ''}`; // prettier-ignore
     if (!rawLine || !col) {
       this.errors.push(simpleErrorMessage);
       return { error: true };
