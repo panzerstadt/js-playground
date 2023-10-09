@@ -1,5 +1,5 @@
 import { ParseError } from "./errors.mjs";
-import { Expr } from "./expression.mjs";
+import { AnyExpr, Expr } from "./expression.mjs";
 import { Token } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
@@ -61,12 +61,12 @@ export class Parser {
   }
 
   // expression -> equality
-  private expression(): Expr {
+  private expression(): AnyExpr {
     return this.equality();
   }
 
   // equality -> comparison ( ( "!=" | "!==" ) comparison )*
-  private equality(): Expr {
+  private equality(): AnyExpr {
     let expr = this.comparison();
 
     while (this.match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)) {
@@ -79,7 +79,7 @@ export class Parser {
   }
 
   // comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
-  private comparison(): Expr {
+  private comparison(): AnyExpr {
     let expr = this.term();
 
     while (
@@ -94,7 +94,7 @@ export class Parser {
   }
 
   // term = factor ( ( "+" | "-" ) factor )*
-  private term(): Expr {
+  private term(): AnyExpr {
     let expr = this.factor();
 
     while (this.match(TokenType.MINUS, TokenType.PLUS)) {
@@ -107,7 +107,7 @@ export class Parser {
   }
 
   // factor = unary ( ( "/" | "*" ) unary )*
-  private factor(): Expr {
+  private factor(): AnyExpr {
     let expr = this.unary();
 
     while (this.match(TokenType.SLASH, TokenType.STAR)) {
@@ -120,7 +120,7 @@ export class Parser {
   }
 
   // unary = ( "!" | "-" ) unary | primary
-  private unary(): Expr {
+  private unary(): AnyExpr {
     if (this.match(TokenType.BANG, TokenType.MINUS)) {
       const operator = this.previous();
       const right = this.unary();
@@ -131,7 +131,7 @@ export class Parser {
   }
 
   // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
-  private primary(): Expr {
+  private primary(): AnyExpr {
     if (this.match(TokenType.FALSE)) return Expr.Literal(false);
     if (this.match(TokenType.TRUE)) return Expr.Literal(true);
     if (this.match(TokenType.NIL)) return Expr.Literal(null);
@@ -160,6 +160,7 @@ export class Parser {
     throw this.error(this.peek(), message);
   }
 
+  // these are STATIC errors: ERRORTYPE.STATIC
   error(token: Token, message: string) {
     console.error(`tokens errored: ${token.toString()} with '${message}'`);
     this._error.error(token, message); // 1. report to user
@@ -195,7 +196,7 @@ export class Parser {
     }
   }
 
-  parse(): Expr {
+  parse(): AnyExpr {
     try {
       return this.expression();
     } catch (error) {
