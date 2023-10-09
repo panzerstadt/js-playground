@@ -1,110 +1,60 @@
 import { Token } from "./token.mjs";
-import { TokenType } from "./types.mjs";
 
 interface Binary {
-  type: "binary";
-  left: Expr;
-  operator: Token;
-  right: Expr;
+  readonly type: "binary";
+  readonly left: AnyExpr;
+  readonly operator: Token;
+  readonly right: AnyExpr;
+  // accept?: (visitor) => void;
 }
+
+const binary = (left: AnyExpr, operator: Token, right: AnyExpr): Binary => {
+  return {
+    type: "binary",
+    left,
+    operator,
+    right,
+    // accepts a plugin from outside, that can execute using this object's data
+    // accept: (plugin) => plugin.execute(binaryObject),
+    // accept: (visitor) => visitor.visitBinaryExpr(binaryObject),
+  };
+};
 
 interface Grouping {
-  type: "grouping";
-  expression: Expr;
+  readonly type: "grouping";
+  readonly expression: AnyExpr;
 }
 
-interface Literal {
-  type: "literal";
-  value: Object;
-}
-
-interface Unary {
-  type: "unary";
-  operator: Token;
-  right: Expr;
-}
-
-enum PrintStyle {
-  parenthesis,
-  rpn,
-}
-// parsers to the reverse of pprint
-// they take a string and turn it into rules
-// they 'figure out which rules could have generated that string'
-export const printAST = (expr: Expr, style = PrintStyle.parenthesis) => {
-  const parenthesize = (name: string, ...exprs: Expr[]): string => {
-    const result = [];
-
-    result.push("(");
-    result.push(name);
-    for (const expr of exprs) {
-      result.push(" ");
-      result.push(printAST(expr, style));
-    }
-    result.push(")");
-
-    return result.join("");
-  };
-
-  const rpnize = (name: string, ...exprs: Expr[]): string => {
-    const result = [];
-
-    // run through expressions and process the literals
-    for (const expr of exprs) {
-      if (expr.type !== "grouping") {
-        result.push(" ");
-      }
-      result.push(printAST(expr, style));
-    }
-
-    // after all literals are processed, for expressions with tokens
-    // print the token
-    if (expr.type === "binary" || expr.type === "unary") {
-      result.push(" ");
-      result.push(name);
-    }
-
-    return result.join("");
-  };
-
-  const styles = {
-    [PrintStyle.parenthesis]: parenthesize,
-    [PrintStyle.rpn]: rpnize,
-  };
-
-  const process = styles[style];
-
-  switch (expr.type) {
-    case "binary":
-      return process(expr.operator.lexeme, expr.left, expr.right);
-    case "grouping":
-      return process("group", expr.expression);
-    case "literal":
-      return expr.value === null ? "nil" : expr.value.toString();
-    case "unary":
-      return process(expr.operator.lexeme, expr.right);
-    default:
-      return "UNKNOWN";
-  }
-};
-
-const binary = (left: Expr, operator: Token, right: Expr): Binary => {
-  return { type: "binary", left, operator, right };
-};
-
-const grouping = (expression: Expr): Grouping => {
+const grouping = (expression: AnyExpr): Grouping => {
   return { type: "grouping", expression };
 };
+
+interface Literal {
+  readonly type: "literal";
+  readonly value: Object;
+}
 
 const literal = (value: Object): Literal => {
   return { type: "literal", value };
 };
 
-const unary = (operator: Token, right: Expr): Unary => {
+interface Unary {
+  readonly type: "unary";
+  readonly operator: Token;
+  readonly right: AnyExpr;
+}
+
+const unary = (operator: Token, right: AnyExpr): Unary => {
   return { type: "unary", operator, right };
 };
 
-export type Expr = Binary | Grouping | Literal | Unary;
+export type AnyExpr = Binary | Grouping | Literal | Unary;
+export interface Expr {
+  Binary: Binary;
+  Grouping: Grouping;
+  Literal: Literal;
+  Unary: Unary;
+}
 export const Expr = {
   Binary: binary,
   Grouping: grouping,
@@ -112,6 +62,7 @@ export const Expr = {
   Unary: unary,
 };
 
+// import { TokenType } from "./types.mjs";
 // const testrun = () => {
 //   const testExpression = Expr.Binary(
 //     Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
