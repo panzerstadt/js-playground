@@ -23,4 +23,4 @@ const parse = (code) => {
 };
 
 // parse('/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated');
-parse("1 + 3 / (2 * null)");
+parse("0 + 3 / (2 * 3)");

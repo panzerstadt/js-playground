@@ -271,7 +271,7 @@ export class Scanner {
   // implementation
   private addToken(type: TokenType, literal?: Object) {
     const text = this.source.substring(this.start, this.current);
-    this.tokens.push(new Token(type, text, literal || null, this.line));
+    this.tokens.push(new Token(type, text, literal ?? null, this.line));
   }
 
   private isAtEnd() {
