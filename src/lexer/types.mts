@@ -93,7 +93,7 @@ export enum TokenType {
   // just for testing out the babyparser
   // TODO: remove
   LEFT_PAREN = "LEFT_PAREN",
-  RIGHT_PAREN = "RIGTH_PAREN",
+  RIGHT_PAREN = "RIGHT_PAREN",
   MINUS = "MINUS",
   STAR = "STAR",
   PLUS = "PLUS",
