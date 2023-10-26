@@ -193,10 +193,9 @@ const resolveParents = async (searchId, searchCol, field = null, _parent = null)
 
       if (relCollection === searchCol) {
         // field = what this collection calls the related document
-        console.log(
-          `\nfound relationship: ${parentCollection} -> ${relCollection} (aliased as: ${fkName})`
-        );
-        // console.log(collectionEntryOrValue);
+        // console.log(
+        //   `\nfound relationship: ${parentCollection} -> ${relCollection} (aliased as: ${fkName})`
+        // );
 
         // hydrate that relationship
         const results = await query(parentCollection).where(relCollection, searchId).get();
@@ -315,12 +314,13 @@ const printTree = (result: BothResult, rootKey = "root", prevWidth = 0) => {
 const searchId = "id1";
 const searchCol = "reports";
 // search...
-resolveParents(searchId, searchCol).then((result) => {
-  // console.log(JSON.stringify(result, null, 4));
-  [result].forEach((res) => printTree(res));
-});
-// for each key in doc, look up relationship
-resolveChildren(searchId, searchCol).then((results) => {
-  // console.log(JSON.stringify(results, null, 4));
-  results.forEach((res) => printTree(res));
-});
+
+Promise.all([resolveParents(searchId, searchCol), resolveChildren(searchId, searchCol)]).then(
+  ([parents, children]) => {
+    console.log("parents:");
+    [parents].forEach((res) => printTree(res));
+    console.log("----------");
+    console.log("children:");
+    children.forEach((res) => printTree(res));
+  }
+);
