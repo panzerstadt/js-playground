@@ -5,7 +5,6 @@ import { Token } from "../token.mjs";
 import { TokenType } from "../types.mjs";
 
 // TODO: make this part of index.mts
-// const lox = new Lox();
 
 export class Interpreter {
   public interpret(expression: AnyExpr) {
@@ -13,7 +12,8 @@ export class Interpreter {
       const value = this.evaluate(expression);
       console.log("=", value);
     } catch (error) {
-      console.error(error);
+      return error;
+      // console.error(error);
       // lox.runtimeError(error);
     }
   }

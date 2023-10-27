@@ -27,7 +27,10 @@ export class Lox {
       if (parser._error.hadError || !expression) {
         console.log("could not parse expression!");
       } else {
-        this.interpreter.interpret(expression);
+        const error = this.interpreter.interpret(expression);
+        if (error) {
+          this.runtimeError(error);
+        }
       }
     }
 
