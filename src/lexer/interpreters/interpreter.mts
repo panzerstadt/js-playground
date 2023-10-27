@@ -11,7 +11,7 @@ export class Interpreter {
   public interpret(expression: AnyExpr) {
     try {
       const value = this.evaluate(expression);
-      console.log(value);
+      console.log("=", value);
     } catch (error) {
       console.error(error);
       // lox.runtimeError(error);

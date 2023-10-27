@@ -3,4 +3,7 @@ import { Lox } from "./lox.mjs";
 // parse('/ \'this\' "maybe" test = 1 1.123 \n /* comment */ <cool> // some text \n "unterminated');
 
 const lox = new Lox();
-lox.run("0 + 3 / (2 * 5)", true);
+
+const initialTest = "0 + 3 / (2 * 5)";
+console.log("running initial test of: ", initialTest);
+lox.run(initialTest, false);
