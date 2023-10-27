@@ -1,7 +1,11 @@
 import { RuntimeError } from "../errors.mjs";
 import { AnyExpr, Expr } from "../expression.mjs";
+import { Lox } from "../lox.mjs";
 import { Token } from "../token.mjs";
 import { TokenType } from "../types.mjs";
+
+// TODO: make this part of index.mts
+// const lox = new Lox();
 
 export class Interpreter {
   public interpret(expression: AnyExpr) {
@@ -9,8 +13,8 @@ export class Interpreter {
       const value = this.evaluate(expression);
       console.log(value);
     } catch (error) {
-      // Lox.runtimeError(error)
-      throw error;
+      console.error(error);
+      // lox.runtimeError(error);
     }
   }
   // like printAST's process() method, is recursive
