@@ -1,5 +1,17 @@
 import { TokenType } from "./types.mjs";
 
+/**
+ * Tokens are used to represent lexemes, the 'things' that a lexer outputs
+ * Tokens vs Lexemes: https://chat.openai.com/share/74296ca9-de59-45c4-9893-a28764619350
+ *
+ * Lexeme:
+ * base form of a language's unit of meaning
+ * (e.g. 'run' is a lexeme of 'running')
+ * (e.g. '2' represents a unit of 'numbers')
+ *
+ * Token:
+ * the runtime container used to represent lexemes
+ */
 export class Token {
   type: TokenType;
   lexeme: string;

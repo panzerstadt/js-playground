@@ -9,6 +9,8 @@ import { TokenType } from "./types.mjs";
 // between tokens
 
 /**
+ * Scanner ~= Lexer
+ *
  * in the Chomsky Hierarchy, the grammar here is called Regular Grammar
  *
  * This means that they don't have nested structures or dependencies

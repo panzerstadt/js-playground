@@ -1,4 +1,4 @@
-import { Token } from "./token.mjs";
+import { Token } from "../token.mjs";
 
 interface Binary {
   readonly type: "binary";

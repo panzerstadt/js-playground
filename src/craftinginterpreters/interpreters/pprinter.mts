@@ -1,6 +1,13 @@
-import { AnyExpr } from "../expression.mjs";
+import { AnyExpr } from "../primitives/expressions.mjs";
 
 /**
+ * This is also an interpreter,
+ * it interprets the expression as
+ * a different form of expression.
+ *
+ * think of it like seeing a problem
+ * with a different perspective
+ *
  * Interpret as strings into terminal
  */
 
@@ -9,7 +16,7 @@ enum PrintStyle {
   rpn,
 }
 
-// parsers to the reverse of pprint
+// parsers do the reverse of pprint
 // they take a string and turn it into rules
 // they 'figure out which rules could have generated that string'
 export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis) => {

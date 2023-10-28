@@ -1,5 +1,5 @@
 import { ParseError } from "./errors.mjs";
-import { AnyExpr, Expr } from "./expression.mjs";
+import { AnyExpr, Expr } from "./primitives/expressions.mjs";
 import { Token } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
@@ -196,6 +196,10 @@ export class Parser {
     }
   }
 
+  /**
+   * https://chat.openai.com/share/f07650ce-da19-432a-945c-40875140b9b9
+   * @returns a parse tree (NOT an AST)
+   */
   parse(): AnyExpr {
     try {
       return this.expression();

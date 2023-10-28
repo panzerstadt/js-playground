@@ -1,6 +1,5 @@
 import { RuntimeError } from "../errors.mjs";
-import { AnyExpr, Expr } from "../expression.mjs";
-import { Lox } from "../lox.mjs";
+import { AnyExpr, Expr } from "../primitives/expressions.mjs";
 import { Token } from "../token.mjs";
 import { TokenType } from "../types.mjs";
 
@@ -13,7 +12,6 @@ export class Interpreter {
       console.log("=", value);
     } catch (error) {
       return error;
-      // console.error(error);
       // lox.runtimeError(error);
     }
   }
@@ -64,6 +62,12 @@ export class Interpreter {
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
+  private checkDivideByZero(operator: Token, secondOperand: Object) {
+    if (typeof secondOperand === "number" && secondOperand !== 0) return;
+    throw new RuntimeError(operator, "Cannot divide by zero");
+  }
+
+  // literal is leaf node of the expression, it holds the value
   public visitLiteralExpr(expr: Expr["Literal"]): Object | number {
     return expr.value;
   }
@@ -126,6 +130,7 @@ export class Interpreter {
         throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
       case TokenType.SLASH:
         this.checkNumberOperands(expr.operator, left, right);
+        this.checkDivideByZero(expr.operator, right);
         // @ts-ignore
         return (left / right) as number;
       case TokenType.STAR:
