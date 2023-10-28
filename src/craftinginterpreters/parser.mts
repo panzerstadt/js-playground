@@ -1,13 +1,14 @@
 import { ParseError } from "./errors.mjs";
 import { AnyExpr, Expr } from "./primitives/expressions.mjs";
+import { AnyStmt, Stmt } from "./primitives/statements.mjs";
 import { Token } from "./token.mjs";
 import { TokenType } from "./types.mjs";
 
 /*
 Scanner = reads characters left to right
 Parser = reads Tokens left to right
-
-Grammar for this parser (BNF)
+------
+Expression Grammar for this parser (BNF) (subset of statement grammar)
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -17,19 +18,35 @@ unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
+-------
+Statement Grammar for this parser (BNF) (superset)
+program        → statement* EOF ;
 
+statement      → exprStmt
+               | printStmt ;
+
+exprStmt       → expression ";" ;
+printStmt      → "print" expression ";" ;   
+
+program represents a complete Lox script/repl entry.
+a Program = a list of statements followed by an End-Of-File token
+-------
 Btw, (BNF) attempt for english: https://english.stackexchange.com/a/60761
 */
 export class Parser {
   private static ParseError = class extends Error {};
   private tokens: Token[];
   private current: number;
-  _error: ParseError;
+  private _error: ParseError;
 
   constructor(tokens: Token[]) {
     this.current = 0;
     this.tokens = tokens;
     this._error = new ParseError();
+  }
+
+  hadError() {
+    return this._error.hadError;
   }
 
   private match(...types: TokenType[]) {
@@ -198,15 +215,48 @@ export class Parser {
     }
   }
 
+  private printStatement() {
+    const value = this.expression();
+    this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
+    return Stmt.Print(value);
+  }
+
+  private expressionStatement() {
+    const expr = this.expression();
+    if (!expr) {
+      console.log("could not parse expression!");
+    }
+    this.consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+    return Stmt.Expression(expr);
+  }
+
+  private statement(): AnyStmt {
+    if (this.match(TokenType.PRINT)) return this.printStatement();
+
+    return this.expressionStatement();
+  }
+
   /**
    * Parse Tree vs AST: https://chat.openai.com/share/f07650ce-da19-432a-945c-40875140b9b9
    * @returns a parse tree (NOT an AST)
    */
-  parse(): AnyExpr {
+  parse(debug?: boolean): AnyStmt[] {
     try {
-      return this.expression();
-    } catch (error) {
-      //   console.log("error thrown: ", error);
+      const statements = [];
+      while (!this.isAtEnd()) {
+        statements.push(this.statement());
+      }
+
+      if (debug) {
+        statements.forEach((stmt) => {
+          // console.log("\nparse tree (json):\n", JSON.stringify(expression, null, 4));
+          console.log("parse tree (json):\n", stmt.expression);
+        });
+      }
+
+      return statements;
+    } catch (_) {
+      // this.hadError handles the error later
       return null;
     }
   }

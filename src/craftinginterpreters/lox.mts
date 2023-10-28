@@ -16,48 +16,47 @@ export class Lox {
     this.hadRuntimeError = true;
   }
 
+  pprintStep(phase: string) {
+    console.log("-----------------");
+    console.log(phase + "...");
+    console.log("-----------------");
+  }
+
   /**
    * when the interpreter stores global variables.
    * Those variables should persist throughout the REPL session.
    */
   run(code: string = null, debug: boolean = false) {
-    if (!!code) {
-      // 1. scan text, turn them into tokens that the language recognizes
-      //    token = lexeme + metadata
-      const scanner = new Scanner(code);
-      const tokens = scanner.scanTokens();
-      debug && console.log("\nTokens:\n", tokens);
+    if (!code) return this.nextLoop(debug);
 
-      // 2. parse text into expressions, in the form of an AST
-      const parser = new Parser(tokens);
-      const expression = parser.parse();
+    // 1. scan text, turn them into tokens that the language recognizes
+    //    token = lexeme + metadata
+    debug && this.pprintStep("Scanning");
+    const scanner = new Scanner(code);
+    const tokens = scanner.scanTokens(debug);
 
-      if (debug) {
-        // console.log("\nparse tree (json):\n", JSON.stringify(expression, null, 4));
-        console.log("\nparse tree (json):\n", expression);
+    if (scanner.hadError()) return this.nextLoop(debug);
 
-        console.log("\nlisp-like: ", printAST(expression, PrintStyle.parenthesis));
-        console.log("\nrpn      : ", printAST(expression, PrintStyle.rpn));
-        console.log("\nast      :\n", printAST(expression, PrintStyle.ast));
-        console.log(
-          "\nast(json):\n",
-          JSON.stringify(printAST(expression, PrintStyle.json), null, 3)
-        );
-      }
+    // 2. parse text into expressions, in the form of an AST
+    debug && this.pprintStep("Parsing");
+    const parser = new Parser(tokens);
+    const statements = parser.parse(debug);
 
-      if (parser._error.hadError || !expression) {
-        console.log("could not parse expression!");
-      } else {
-        // 3. interpret expression and show result
-        debug && console.log("\nInterpretation:");
-        const error = this.interpreter.interpret(expression);
-        if (error) {
-          this.runtimeError(error);
-        }
-      }
+    if (parser.hadError()) return this.nextLoop(debug);
+
+    // 3. interpret expression and show result
+    //       interpreter can't be new every time because
+    //       we want it to have memory across repls
+    debug && this.pprintStep("Interpreting");
+    const error = this.interpreter.interpret(statements, debug);
+    if (error) {
+      this.runtimeError(error);
     }
 
-    console.log(" ");
+    this.nextLoop(debug);
+  }
+
+  nextLoop(debug: boolean) {
     const newPrompt = prompt();
     const nextCode = newPrompt(">");
 

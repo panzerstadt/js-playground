@@ -28,8 +28,6 @@ export enum TokenType {
   SENSOR_BINDINGS = "sensor_bindings",
   COMPATIBLE = "compatible",
 
-  // just for testing out the babyparser
-  // TODO: remove
   LEFT_PAREN = "LEFT_PAREN",
   RIGHT_PAREN = "RIGHT_PAREN",
   MINUS = "MINUS",

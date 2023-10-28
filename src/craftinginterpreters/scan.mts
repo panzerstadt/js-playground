@@ -22,20 +22,24 @@ import { TokenType } from "./types.mjs";
  * (e.g. remembering a variable, and then using it somewhere else)
  */
 export class Scanner {
-  source: string;
-  tokens: Token[];
-  start: number = 0;
-  current: number = 0;
-  line: number = 1;
-  error: ScanError;
+  private source: string;
+  private tokens: Token[];
+  private start: number = 0;
+  private current: number = 0;
+  private line: number = 1;
+  private _error: ScanError;
 
   constructor(source: string) {
     this.source = source;
-    this.error = new ScanError();
     this.tokens = [];
+    this._error = new ScanError();
   }
 
-  scanTokens() {
+  hadError() {
+    return this._error.hadError;
+  }
+
+  scanTokens(debug?: boolean) {
     while (!this.isAtEnd()) {
       // console.log("where am i", this.current);
       // beginning of the next lexeme
@@ -44,9 +48,11 @@ export class Scanner {
     }
 
     this.tokens.push(new Token(TokenType.EOF, "", null, this.line));
-    if (this.error.hadError) {
-      this.error.printErrors();
+    if (this._error.hadError) {
+      this._error.printErrors();
     }
+
+    debug && console.log("Tokens:\n", this.tokens);
     return this.tokens;
   }
 
@@ -157,7 +163,7 @@ export class Scanner {
           // of what the author was trying to write?
           // refer to "Musings on a middle-ground Programming Language"
           const msg = `Unexpected character "${this.source[this.current - 1]}"`;
-          this.error.error(this.line, msg, this.source, this.current);
+          this._error.error(this.line, msg, this.source, this.current);
         }
         break;
     }
@@ -195,7 +201,7 @@ export class Scanner {
 
     if (this.isAtEnd()) {
       const msg = `Unterminated string: "${this.source[this.current - 1]}"`;
-      this.error.error(this.line, msg, this.source, this.current);
+      this._error.error(this.line, msg, this.source, this.current);
       return;
     }
 
@@ -216,7 +222,7 @@ export class Scanner {
 
     if (this.isAtEnd()) {
       const msg = `Unterminated keymap entries: "${this.source[this.current - 1]}"`;
-      this.error.error(this.line, msg, this.source, this.current);
+      this._error.error(this.line, msg, this.source, this.current);
       return;
     }
 
@@ -253,7 +259,7 @@ export class Scanner {
     if (!identifierType) {
       const didYouMean = accidentalKeywords[text];
       if (!!didYouMean) {
-        this.error.error(this.line, didYouMean, this.source, this.current);
+        this._error.error(this.line, didYouMean, this.source, this.current);
       }
       identifierType = TokenType.IDENTIFIER;
     }

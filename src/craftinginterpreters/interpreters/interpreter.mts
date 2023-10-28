@@ -1,18 +1,35 @@
 import { RuntimeError } from "../errors.mjs";
 import { AnyExpr, Expr } from "../primitives/expressions.mjs";
+import { AnyStmt, Stmt } from "../primitives/statements.mjs";
 import { Token } from "../token.mjs";
 import { TokenType } from "../types.mjs";
+import { PrintStyle, printAST } from "./pprinter.mjs";
 
 export class Interpreter {
-  public interpret(expression: AnyExpr) {
+  public interpret(statements: AnyStmt[], debug?: boolean) {
     try {
-      const value = this.evaluate(expression);
-      console.log("=", value);
-    } catch (error) {
-      return error;
+      for (const statement of statements) {
+        this.execute(statement, debug);
+      }
+    } catch (runtimeError) {
+      console.log("runtime error", runtimeError);
+      return runtimeError;
       // lox.runtimeError(error);
     }
   }
+
+  private execute(stmt: AnyStmt, debug?: boolean) {
+    switch (stmt.type) {
+      case "expression":
+        return this.visitExpressionStmt(stmt, debug);
+      case "print":
+        return this.visitPrintStmt(stmt, debug);
+    }
+
+    // unreachable
+    return null;
+  }
+
   // like printAST's process() method, is recursive
   private evaluate(expr: AnyExpr) {
     switch (expr.type) {
@@ -139,5 +156,34 @@ export class Interpreter {
 
     // unreachable
     return null;
+  }
+
+  debugStatement(stmt: AnyStmt) {
+    console.log("lisp-like: ", printAST(stmt.expression, PrintStyle.parenthesis));
+    console.log("- - - - -");
+    console.log("rpn      : ", printAST(stmt.expression, PrintStyle.rpn));
+    console.log("- - - - -");
+    console.log("ast      :\n", printAST(stmt.expression, PrintStyle.ast));
+    console.log("- - - - -");
+    console.log(
+      "ast(json):\n",
+      JSON.stringify(printAST(stmt.expression, PrintStyle.json), null, 3)
+    );
+    console.log(" ");
+  }
+
+  public visitExpressionStmt(stmt: Stmt["Expression"], debug = false): void {
+    debug && this.debugStatement(stmt);
+
+    this.evaluate(stmt.expression);
+  }
+
+  public visitPrintStmt(stmt: Stmt["Print"], debug?: boolean): void {
+    debug && this.debugStatement(stmt);
+
+    const value = this.evaluate(stmt.expression);
+
+    debug && console.log("Interpreted Output:");
+    console.log(">>", value);
   }
 }
