@@ -1,5 +1,6 @@
 import { RuntimeError } from "./errors.mjs";
 import { Interpreter } from "./interpreters/interpreter.mjs";
+import { PrintStyle, printAST } from "./interpreters/pprinter.mjs";
 import { Parser } from "./parser.mjs";
 import { Scanner } from "./scan.mjs";
 import prompt from "prompt-sync";
@@ -30,7 +31,19 @@ export class Lox {
       // 2. parse text into expressions, in the form of an AST
       const parser = new Parser(tokens);
       const expression = parser.parse();
-      debug && console.log("\nAST:\n", expression);
+
+      if (debug) {
+        // console.log("\nparse tree (json):\n", JSON.stringify(expression, null, 4));
+        console.log("\nparse tree (json):\n", expression);
+
+        console.log("\nlisp-like: ", printAST(expression, PrintStyle.parenthesis));
+        console.log("\nrpn      : ", printAST(expression, PrintStyle.rpn));
+        console.log("\nast      :\n", printAST(expression, PrintStyle.ast));
+        console.log(
+          "\nast(json):\n",
+          JSON.stringify(printAST(expression, PrintStyle.json), null, 3)
+        );
+      }
 
       if (parser._error.hadError || !expression) {
         console.log("could not parse expression!");

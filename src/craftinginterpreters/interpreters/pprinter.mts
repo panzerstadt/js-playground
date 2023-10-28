@@ -11,15 +11,17 @@ import { AnyExpr } from "../primitives/expressions.mjs";
  * Interpret as strings into terminal
  */
 
-enum PrintStyle {
+export enum PrintStyle {
   parenthesis,
   rpn,
+  ast,
+  json,
 }
 
 // parsers do the reverse of pprint
 // they take a string and turn it into rules
 // they 'figure out which rules could have generated that string'
-export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis) => {
+export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis, padLeft = 0) => {
   const parenthesize = (name: string, ...exprs: AnyExpr[]): string => {
     const result = [];
 
@@ -55,12 +57,49 @@ export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis) => {
     return result.join("");
   };
 
-  const styles = {
-    [PrintStyle.parenthesis]: parenthesize,
-    [PrintStyle.rpn]: rpnize,
+  const space = (num: number) => new Array(Math.round(num)).fill(" ").join("");
+  const simplifiedAST = (name: string, ...exprs: AnyExpr[]): string => {
+    let ast = [];
+
+    ast.push(`${space(padLeft)}${name}`);
+    let temp = "";
+    temp += space(padLeft);
+    for (const expr of exprs) {
+      temp += printAST(expr, style, padLeft + 2);
+      temp += space(padLeft);
+    }
+    ast.push(temp);
+
+    return ast.join("\n");
   };
 
-  const process = styles[style];
+  /**
+   * this can actually be fed into a react flow visualizer
+   */
+  const simplifiedJSON = (name: string, ...exprs: AnyExpr[]): Object => {
+    let ast = {
+      V: name,
+    };
+
+    for (const idx in exprs) {
+      const label = idx === "0" ? "L" : "R";
+      ast = {
+        ...ast,
+        [label]: printAST(exprs[idx], style),
+      };
+    }
+
+    return ast;
+  };
+
+  const processor = {
+    [PrintStyle.parenthesis]: parenthesize,
+    [PrintStyle.rpn]: rpnize,
+    [PrintStyle.ast]: simplifiedAST,
+    [PrintStyle.json]: simplifiedJSON,
+  };
+
+  const process = processor[style];
 
   // equivalent to visitXXXExpr
   switch (expr.type) {
@@ -73,7 +112,7 @@ export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis) => {
       // public String visitGroupingExpr(Expr.Grouping expr) {
       //   return parenthesize("group", expr.expression);
       // }
-      return process("group", expr.expression);
+      return process("grp", expr.expression);
     case "literal":
       // public String visitLiteralExpr(Expr.Literal expr) {
       //   if (expr.value == null) return "nil";

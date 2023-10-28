@@ -3,8 +3,6 @@ import { AnyExpr, Expr } from "../primitives/expressions.mjs";
 import { Token } from "../token.mjs";
 import { TokenType } from "../types.mjs";
 
-// TODO: make this part of index.mts
-
 export class Interpreter {
   public interpret(expression: AnyExpr) {
     try {
