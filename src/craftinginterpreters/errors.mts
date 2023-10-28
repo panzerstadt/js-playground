@@ -73,6 +73,10 @@ export class ParseError {
   hadError: boolean;
   errors: string[];
 
+  constructor() {
+    this.errors = [];
+  }
+
   error(token: Token, message: string) {
     if (token.type === TokenType.EOF) {
       this.report(token.line, " at end", message);
