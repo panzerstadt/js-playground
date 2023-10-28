@@ -22,18 +22,20 @@ export class Lox {
   run(code: string = null, debug: boolean = false) {
     if (!!code) {
       // 1. scan text, turn them into tokens that the language recognizes
+      //    token = lexeme + metadata
       const scanner = new Scanner(code);
       const tokens = scanner.scanTokens();
-      debug && console.log("tokens scanned: ", tokens);
+      debug && console.log("\nTokens:\n", tokens);
 
-      // 2. parse text into expressions
+      // 2. parse text into expressions, in the form of an AST
       const parser = new Parser(tokens);
       const expression = parser.parse();
-      debug && console.log("expression parsed: ", expression);
+      debug && console.log("\nAST:\n", expression);
 
       if (parser._error.hadError || !expression) {
         console.log("could not parse expression!");
       } else {
+        // 3. interpret expression and show result
         const error = this.interpreter.interpret(expression);
         if (error) {
           this.runtimeError(error);
@@ -41,6 +43,7 @@ export class Lox {
       }
     }
 
+    console.log(" ");
     const newPrompt = prompt();
     const nextCode = newPrompt(">");
 

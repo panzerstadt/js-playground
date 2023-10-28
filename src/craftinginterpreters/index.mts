@@ -6,4 +6,4 @@ const lox = new Lox();
 
 const initialTest = "0 + 3 / (2 * 5)";
 console.log("running initial test of: ", initialTest);
-lox.run(initialTest, false);
+lox.run(initialTest, true);

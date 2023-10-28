@@ -7,7 +7,7 @@ import { TokenType } from "./types.mjs";
 Scanner = reads characters left to right
 Parser = reads Tokens left to right
 
-Grammar for this parser
+Grammar for this parser (BNF)
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -17,6 +17,8 @@ unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
+
+Btw, (BNF) attempt for english: https://english.stackexchange.com/a/60761
 */
 export class Parser {
   private static ParseError = class extends Error {};
@@ -197,7 +199,7 @@ export class Parser {
   }
 
   /**
-   * https://chat.openai.com/share/f07650ce-da19-432a-945c-40875140b9b9
+   * Parse Tree vs AST: https://chat.openai.com/share/f07650ce-da19-432a-945c-40875140b9b9
    * @returns a parse tree (NOT an AST)
    */
   parse(): AnyExpr {
