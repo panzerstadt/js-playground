@@ -36,6 +36,7 @@ export class Lox {
         console.log("could not parse expression!");
       } else {
         // 3. interpret expression and show result
+        debug && console.log("\nInterpretation:");
         const error = this.interpreter.interpret(expression);
         if (error) {
           this.runtimeError(error);
