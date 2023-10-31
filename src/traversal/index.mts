@@ -1,4 +1,4 @@
-const DEBUG = true;
+const DEBUG = false;
 
 const relationships = {
   reports: {
@@ -31,7 +31,7 @@ const relationships = {
  *        teams
  *        visualization
  */
-const bigdb = {
+const db = {
   instances: [
     {
       id: "root-parent-id",
@@ -107,7 +107,7 @@ const bigdb = {
   ],
 };
 
-const db = {
+const smldb = {
   // instances: [
   //   {
   //     id: "root-parent-id",
@@ -171,7 +171,7 @@ const query = (col) => {
 
       if (collection) {
         // console.log(`ORM: collection found: collection:${col} has ${collection[0].id}!`);
-        console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
+        // console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
         result = collection.filter((doc) => {
           const valueOrValuesInCollection = doc[fieldType];
           // console.log("doc fieltype", doc, fieldType, doc[fieldType]);
@@ -249,11 +249,8 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
     return relCollection === searchCol;
   };
-  // console.log(`resolving parents: id:${searchId}, col:${searchCol}`);
   const rootDocument = await query(searchCol).where("id", searchId).first();
 
-  // if the result hits the original search id the second time, stop
-  // const skip = result.id === _parent?.id || parentRootSearchCount > 1;
   if (_parents.length === 0) {
     _parents.push(rootDocument);
   }
@@ -288,7 +285,6 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
       return willTraverse;
     })
-
     .map(async ([parentCollection, parentRelationships]) => {
       const parentCollectionRelationships = Object.entries(parentRelationships);
       const relationshipPromises = parentCollectionRelationships
@@ -307,91 +303,52 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
           // hydrate that relationship
           const searchTerm = rootDocument[relField] ?? searchId;
-          // there can be more than one document that refer to root document (e.g. 2 viz docs pointing to one report)
+          // FIXME: there can be more than one document that refer to root document (e.g. 2 viz docs pointing to one report). this hasn't been captured in the implementation
           const results = await query(parentCollection).where(fkName, searchTerm).get();
-          if (results.length === 0) return null;
+          if (results.length === 0) return { [parentCollection]: [] } as ParentResult["parents"];
 
-          const result = results[0]; // FIXME: make it work for multiple results
+          const result = results[0]; // FIXME: make it work for multiple results (e.g. id88 visualization 88)
 
-          // const promises = results.map(async (result) => {
           const skip = _parents.some((p) => p.id === result.id) && parentRootSearchCount > 1;
-          // FIXME: hitting a loop
           if (skip) {
-            console.log(
-              "HIT A LOOP",
-              result.id,
-              _parents.map((p) => p.id)
-            );
+            DEBUG &&
+              console.log(
+                "HIT A LOOP",
+                result.id,
+                _parents.map((p) => p.id)
+              );
 
-            // if (_parents.length > 3) return accumulated;
-            // console.log(
-            //   "completing!",
-            //   _parents.map((p) => p.id),
-            //   result.id
-            // );
-            return null;
+            // return the duplicate (root) document with no parents
+            return {
+              [parentCollection]: [{ document: result, parents: {} }],
+            } as ParentResult["parents"];
           }
 
-          console.log("resolving one level up using", result);
+          DEBUG && console.log("resolving one level up using", result);
           _parents.push(result);
 
-          // const resolvedParent = await resolveParents(result.id, parentCollection, null, _parents);
-          // const resolvedParent = skip
-          //   ? []
-          //   : await resolveParents(result.id, parentCollection, null, _parents);
-
-          // accumulated = {
-          //   ...accumulated,
-          //   // @ts-ignore
-          //   parents: {
-          //     [parentCollection]: [resolvedParent],
-          //   },
-          // };
-
-          // return await resolveParents(result.id, parentCollection, null, _parents);
           return {
-            // ...accumulated,
-            parents: {
-              ...accumulated.parents,
-              [parentCollection]: await resolveParents(result.id, parentCollection, null, _parents),
-            },
-          } as ParentResult;
+            [parentCollection]: [await resolveParents(result.id, parentCollection, null, _parents)],
+          } as ParentResult["parents"];
         });
 
-      const parents = (await Promise.all(relationshipPromises)).filter(Boolean);
+      const parents = (await Promise.all(relationshipPromises)) as ParentResult["parents"][];
 
-      if (parents.length === 0) return null;
-      return parents;
+      if (parents.length === 0) return {};
+      return parents[0];
     });
 
-  const resolvedParents = (await Promise.all(parentPromises))
-    .filter(Boolean)
-    .filter((r) => r.length > 0);
+  const resolvedParents = await Promise.all(parentPromises);
   if (resolvedParents.length === 0) return accumulated;
 
-  // console.log("WHAT is BIEGRES", JSON.stringify(bigres, null, 2));
-  // return bigres;
-  // return accumulated;
-  console.log("resolvedParents", resolvedParents[0][0].parents);
-  console.log("resolvedParents", resolvedParents[1][0].parents);
-
   const parentEntries = resolvedParents.reduce((acc, parent) => {
-    const entry = Object.entries(parent[0].parents)[0];
-    return {
-      ...acc,
-      [entry[0]]: entry[1],
-    };
+    return { ...acc, ...parent };
   }, {});
-  console.log("parents", parentEntries);
+
   return {
     ...accumulated,
-    parents: {
-      ...accumulated.parents,
-      ...parentEntries,
-      // ["WHAT"]: resolvedParents, // this should be filled by loopoing through the promises
-    },
-  };
-  // return bigres.filter((r) => r.length > 0);
+    parents: { ...accumulated.parents, ...parentEntries },
+  } as ParentResult;
 };
 
 let childRootSearchCount = 0;
@@ -470,6 +427,7 @@ const printTree = (result: BothResult, rootKey = "root", prevWidth = 0) => {
   if (result.parents) {
     const parentEntries = Object.entries(result.parents);
     parentEntries.forEach(([key, results]) => {
+      // console.log("logging", key, results);
       results.forEach((res) => printTree(res, key, parentWidth + 4));
     });
   }
@@ -492,11 +450,11 @@ Promise.all([resolveParents(searchId, searchCol), resolveChildren(searchId, sear
   ([parents, children]) => {
     console.log(`parents: (... uses ${searchId}):`);
     // console.log(parents);
-    console.log(JSON.stringify(parents, null, 2));
-    // parents.forEach((res) => printTree(res));
+    // console.log(JSON.stringify(parents, null, 2));
+    [parents].forEach((res) => printTree(res));
     console.log("----------");
     console.log(`children: (${searchId} uses ...)`);
-    console.log(children);
-    // children.forEach((res) => printTree(res));
+    // console.log(children);
+    children.forEach((res) => printTree(res));
   }
 );
