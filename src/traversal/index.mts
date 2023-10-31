@@ -108,6 +108,12 @@ const bigdb = {
 };
 
 const db = {
+  // instances: [
+  //   {
+  //     id: "root-parent-id",
+  //     projects: ["project 55"],
+  //   },
+  // ],
   projects: [
     {
       name: "project 55",
@@ -136,22 +142,22 @@ const db = {
     //   viz_id: "id99",
     // },
   ],
-  // visualizations: [
-  //   {
-  //     name: "visualization 99",
-  //     id: "id99",
-  //     creator: "id2",
-  //     owners: ["userA", "userB"],
-  //     reports: ["id1", "id7"],
-  //   },
-  //   {
-  //     name: "visualization 88",
-  //     id: "id88",
-  //     creator: "id2b",
-  //     owners: ["userA"],
-  //     reports: ["id1"],
-  //   },
-  // ],
+  visualizations: [
+    {
+      name: "visualization 99",
+      id: "id99",
+      creator: "id2",
+      owners: ["userA", "userB"],
+      reports: ["id1", "id7"],
+    },
+    {
+      name: "visualization 88",
+      id: "id88",
+      creator: "id2b",
+      owners: ["userA"],
+      reports: ["id1"],
+    },
+  ],
 };
 
 const query = (col) => {
@@ -165,7 +171,7 @@ const query = (col) => {
 
       if (collection) {
         // console.log(`ORM: collection found: collection:${col} has ${collection[0].id}!`);
-        // console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
+        console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
         result = collection.filter((doc) => {
           const valueOrValuesInCollection = doc[fieldType];
           // console.log("doc fieltype", doc, fieldType, doc[fieldType]);
@@ -244,29 +250,29 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
     return relCollection === searchCol;
   };
   // console.log(`resolving parents: id:${searchId}, col:${searchCol}`);
-  const result = await query(searchCol).where("id", searchId).first();
+  const rootDocument = await query(searchCol).where("id", searchId).first();
 
   // if the result hits the original search id the second time, stop
   // const skip = result.id === _parent?.id || parentRootSearchCount > 1;
   if (_parents.length === 0) {
-    _parents.push(result);
+    _parents.push(rootDocument);
   }
-  if (_parents.some((p) => p.id === result.id)) {
+  if (_parents.some((p) => p.id === rootDocument.id)) {
     parentRootSearchCount++;
   }
 
   // first level
   let accumulated: ParentResult = {
-    document: result,
+    document: rootDocument,
     parents: {},
   };
 
   const relationshipEntries = Object.entries(relationships);
-  const bigPromises = relationshipEntries
-    .filter(([parentCollection, entry]) => {
-      const collectionRelationships = Object.entries(entry);
+  const parentPromises = relationshipEntries
+    .filter(([parentCollection, parentRelationships]) => {
+      const parentCollectionRelationships = Object.entries(parentRelationships);
 
-      const relatedToSearchCollection = collectionRelationships.filter(
+      const relatedToSearchCollection = parentCollectionRelationships.filter(
         relationshipEntryRefersToSearchCol
       );
 
@@ -283,92 +289,106 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
       return willTraverse;
     })
 
-    .map(async ([parentCollection, entry]) => {
-      const collectionRelationships = Object.entries(entry);
-      const promises = collectionRelationships
+    .map(async ([parentCollection, parentRelationships]) => {
+      const parentCollectionRelationships = Object.entries(parentRelationships);
+      const relationshipPromises = parentCollectionRelationships
         .filter(relationshipEntryRefersToSearchCol)
-        .map(async ([fkName, collectionEntryOrValue]) => {
+        /**
+         * e.g. for the following relationship:
+         * reports: { creator: { collection: "users", field: "name" }}
+         * fkName == creator
+         * relationshipEntryOrValue = { collection: "users", field: "name" }
+         */
+        .map(async ([fkName, relationshipEntryOrValue]) => {
           let relField = null;
-          if (typeof collectionEntryOrValue !== "string") {
-            relField = collectionEntryOrValue.field;
+          if (typeof relationshipEntryOrValue !== "string") {
+            relField = relationshipEntryOrValue.field;
           }
 
           // hydrate that relationship
-          const searchTerm = result[relField] ?? searchId;
+          const searchTerm = rootDocument[relField] ?? searchId;
+          // there can be more than one document that refer to root document (e.g. 2 viz docs pointing to one report)
           const results = await query(parentCollection).where(fkName, searchTerm).get();
           if (results.length === 0) return null;
 
-          const promises = results.map(async (res) => {
-            // FIXME: hitting a loop
-            if (_parents.some((p) => p.id === res.id)) {
-              console.log(
-                "HIT A LOOP",
-                res.id,
-                _parents.map((p) => p.id)
-              );
-              // console.log(
-              //   "completing!",
-              //   _parents.map((p) => p.id),
-              //   result.id
-              // );
-              return { document: res, parents: {} } as ParentResult;
-            }
+          const result = results[0]; // FIXME: make it work for multiple results
 
-            console.log("resolving one level up using", res);
-            _parents.push(res);
-            return {
-              ...accumulated,
-              parents: {
-                ...accumulated.parents,
-                [parentCollection]: await resolveParents(res.id, parentCollection, null, _parents),
-              },
-            };
-            // return await resolveParents(res.id, parentCollection, null, _parents);
-          });
+          // const promises = results.map(async (result) => {
+          const skip = _parents.some((p) => p.id === result.id) && parentRootSearchCount > 1;
+          // FIXME: hitting a loop
+          if (skip) {
+            console.log(
+              "HIT A LOOP",
+              result.id,
+              _parents.map((p) => p.id)
+            );
 
-          const subResults = (await Promise.all(promises)).filter(Boolean);
-          // console.log("subREsults", subResults);
-          if (subResults.length === 0) return null;
-          return subResults;
+            // if (_parents.length > 3) return accumulated;
+            // console.log(
+            //   "completing!",
+            //   _parents.map((p) => p.id),
+            //   result.id
+            // );
+            return null;
+          }
+
+          console.log("resolving one level up using", result);
+          _parents.push(result);
+
+          // const resolvedParent = await resolveParents(result.id, parentCollection, null, _parents);
+          // const resolvedParent = skip
+          //   ? []
+          //   : await resolveParents(result.id, parentCollection, null, _parents);
 
           // accumulated = {
           //   ...accumulated,
+          //   // @ts-ignore
           //   parents: {
-          //     ...accumulated.parents,
-          //     [parentCollection]: subResults,
+          //     [parentCollection]: [resolvedParent],
           //   },
           // };
-          // return accumulated;
 
-          // }
+          // return await resolveParents(result.id, parentCollection, null, _parents);
+          return {
+            // ...accumulated,
+            parents: {
+              ...accumulated.parents,
+              [parentCollection]: await resolveParents(result.id, parentCollection, null, _parents),
+            },
+          } as ParentResult;
         });
 
-      const res = (await Promise.all(promises)).filter(Boolean);
+      const parents = (await Promise.all(relationshipPromises)).filter(Boolean);
 
-      if (res.length === 0) return null;
-      return res;
-      // return res.filter(Boolean);
-      return {
-        ...accumulated,
-        parents: {
-          ...accumulated.parents,
-          [parentCollection]: res,
-        },
-      };
-
-      // }
+      if (parents.length === 0) return null;
+      return parents;
     });
 
-  const bigres = (await Promise.all(bigPromises)).filter(Boolean).filter((r) => r.length > 0);
-  if (bigres.length === 0) return null;
+  const resolvedParents = (await Promise.all(parentPromises))
+    .filter(Boolean)
+    .filter((r) => r.length > 0);
+  if (resolvedParents.length === 0) return accumulated;
 
   // console.log("WHAT is BIEGRES", JSON.stringify(bigres, null, 2));
-  return bigres;
+  // return bigres;
+  // return accumulated;
+  console.log("resolvedParents", resolvedParents[0][0].parents);
+  console.log("resolvedParents", resolvedParents[1][0].parents);
+
+  const parentEntries = resolvedParents.reduce((acc, parent) => {
+    const entry = Object.entries(parent[0].parents)[0];
+    return {
+      ...acc,
+      [entry[0]]: entry[1],
+    };
+  }, {});
+  console.log("parents", parentEntries);
   return {
     ...accumulated,
     parents: {
       ...accumulated.parents,
-      ["UHH"]: bigres,
+      ...parentEntries,
+      // ["WHAT"]: resolvedParents, // this should be filled by loopoing through the promises
     },
   };
   // return bigres.filter((r) => r.length > 0);
