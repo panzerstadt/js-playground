@@ -1,3 +1,5 @@
+const DEBUG = true;
+
 const relationships = {
   reports: {
     creator: { collection: "users", field: "name" },
@@ -7,7 +9,7 @@ const relationships = {
   visualizations: {
     creator: "users",
     owners: { collection: "users", field: "name" },
-    // reports: "reports", // FIXME: solve loopback
+    reports: "reports",
   },
   teams: {
     users: "users",
@@ -16,7 +18,7 @@ const relationships = {
     pages: "reports",
   },
   instances: {
-    projects: "projects",
+    projects: { collection: "projects", field: "name" },
   },
 } as const;
 
@@ -29,18 +31,18 @@ const relationships = {
  *        teams
  *        visualization
  */
-const db = {
+const bigdb = {
   instances: [
     {
-      id: "xxx",
-      projects: ["id55"],
+      id: "root-parent-id",
+      projects: ["project 55"],
     },
   ],
   projects: [
     {
       name: "project 55",
       id: "id55",
-      reports: ["id1"],
+      pages: ["id1"],
     },
   ],
   reports: [
@@ -105,6 +107,53 @@ const db = {
   ],
 };
 
+const db = {
+  projects: [
+    {
+      name: "project 55",
+      id: "id55",
+      pages: ["id1"],
+    },
+  ],
+  reports: [
+    //TODO:
+    /**
+     * viz:id99
+     *    reports:id1
+     */
+    {
+      id: "id1",
+      key: "foo",
+      creator: "userA",
+      teams: ["one", "two"],
+      viz_id: "id99",
+    },
+    // {
+    //   id: "id7",
+    //   key: "foo",
+    //   creator: "userD",
+    //   teams: ["one"],
+    //   viz_id: "id99",
+    // },
+  ],
+  // visualizations: [
+  //   {
+  //     name: "visualization 99",
+  //     id: "id99",
+  //     creator: "id2",
+  //     owners: ["userA", "userB"],
+  //     reports: ["id1", "id7"],
+  //   },
+  //   {
+  //     name: "visualization 88",
+  //     id: "id88",
+  //     creator: "id2b",
+  //     owners: ["userA"],
+  //     reports: ["id1"],
+  //   },
+  // ],
+};
+
 const query = (col) => {
   const intersectionBetweenArrays = (array1, array2) => array1.filter((x) => array2.includes(x));
 
@@ -115,27 +164,42 @@ const query = (col) => {
       let result = [];
 
       if (collection) {
-        // console.log("ORM: collection found: ", col, collection[0].id);
-        // console.log(`ORM: query is: where ${fieldType} in ${searchValueOrValues}`);
+        // console.log(`ORM: collection found: collection:${col} has ${collection[0].id}!`);
+        // console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
         result = collection.filter((doc) => {
+          const valueOrValuesInCollection = doc[fieldType];
           // console.log("doc fieltype", doc, fieldType, doc[fieldType]);
           if (Array.isArray(searchValueOrValues)) {
-            if (Array.isArray(doc[fieldType])) {
+            if (Array.isArray(valueOrValuesInCollection)) {
               // search term: string[], value: string[]
-              return intersectionBetweenArrays(searchValueOrValues, doc[fieldType]);
+              const values = valueOrValuesInCollection;
+              return intersectionBetweenArrays(searchValueOrValues, values);
             }
             // search term: string[], value: string
-            return searchValueOrValues.includes(doc[fieldType]);
+            const value = valueOrValuesInCollection;
+            return searchValueOrValues.includes(value);
           } else {
-            if (Array.isArray(doc[fieldType])) {
+            // console.log(
+            //   "searching",
+            //   typeof valueOrValuesInCollection,
+            //   valueOrValuesInCollection,
+            //   typeof searchValueOrValues,
+            //   searchValueOrValues
+            // );
+            if (Array.isArray(valueOrValuesInCollection)) {
               // search term: string, value: string[]
-              return doc[fieldType].includes(searchValueOrValues);
+              const values = valueOrValuesInCollection;
+              return values.includes(searchValueOrValues);
             }
 
             // search term: string, value: string
-            return doc[fieldType] === searchValueOrValues;
+            const value = valueOrValuesInCollection;
+            // console.log("compariing", value, searchValueOrValues, value === searchValueOrValues);
+            return value === searchValueOrValues;
           }
         });
+
+        // console.log("so result is", result);
       }
 
       return {
@@ -168,72 +232,161 @@ interface BothResult extends BaseResult {
 }
 
 let parentRootSearchCount = 0;
-const resolveParents = async (searchId, searchCol, field = null, _parent = null) => {
+const resolveParents = async (searchId, searchCol, field = null, _parents = []) => {
+  const relationshipEntryRefersToSearchCol = ([, collectionEntryOrValue]) => {
+    let relCollection = "";
+    if (typeof collectionEntryOrValue !== "string") {
+      relCollection = collectionEntryOrValue.collection;
+    } else {
+      relCollection = collectionEntryOrValue;
+    }
+
+    return relCollection === searchCol;
+  };
   // console.log(`resolving parents: id:${searchId}, col:${searchCol}`);
-  const rootDocument = await query(searchCol).where("id", searchId).first();
+  const result = await query(searchCol).where("id", searchId).first();
+
+  // if the result hits the original search id the second time, stop
+  // const skip = result.id === _parent?.id || parentRootSearchCount > 1;
+  if (_parents.length === 0) {
+    _parents.push(result);
+  }
+  if (_parents.some((p) => p.id === result.id)) {
+    parentRootSearchCount++;
+  }
 
   // first level
   let accumulated: ParentResult = {
-    document: rootDocument,
+    document: result,
     parents: {},
   };
-  // loop through relationships
-  const colEntries = Object.entries(relationships);
 
-  for (const [parentCollection, entry] of colEntries) {
-    const collectionRelationships = Object.entries(entry);
+  const relationshipEntries = Object.entries(relationships);
+  const bigPromises = relationshipEntries
+    .filter(([parentCollection, entry]) => {
+      const collectionRelationships = Object.entries(entry);
 
-    for (const [fkName, collectionEntryOrValue] of collectionRelationships) {
-      let relCollection = "";
-      if (typeof collectionEntryOrValue !== "string") {
-        relCollection = collectionEntryOrValue.collection;
-      } else {
-        relCollection = collectionEntryOrValue;
+      const relatedToSearchCollection = collectionRelationships.filter(
+        relationshipEntryRefersToSearchCol
+      );
+
+      const willTraverse = relatedToSearchCollection.length > 0;
+
+      if (willTraverse && DEBUG) {
+        console.log(
+          `will traverse '${parentCollection}' because it uses '${searchCol}' in its field: ${relatedToSearchCollection.map(
+            (entry) => `"${entry[0]}" refers to ${JSON.stringify(entry[1])} in ${parentCollection}`
+          )}`
+        );
       }
 
-      if (relCollection === searchCol) {
-        // field = what this collection calls the related document
-        // console.log(
-        //   `\nfound relationship: ${parentCollection} -> ${relCollection} (aliased as: ${fkName})`
-        // );
+      return willTraverse;
+    })
 
-        // hydrate that relationship
-        const results = await query(parentCollection).where(relCollection, searchId).get();
+    .map(async ([parentCollection, entry]) => {
+      const collectionRelationships = Object.entries(entry);
+      const promises = collectionRelationships
+        .filter(relationshipEntryRefersToSearchCol)
+        .map(async ([fkName, collectionEntryOrValue]) => {
+          let relField = null;
+          if (typeof collectionEntryOrValue !== "string") {
+            relField = collectionEntryOrValue.field;
+          }
 
-        const promises = results.map(async (res) => {
-          return await resolveParents(res.id, parentCollection);
+          // hydrate that relationship
+          const searchTerm = result[relField] ?? searchId;
+          const results = await query(parentCollection).where(fkName, searchTerm).get();
+          if (results.length === 0) return null;
+
+          const promises = results.map(async (res) => {
+            // FIXME: hitting a loop
+            if (_parents.some((p) => p.id === res.id)) {
+              console.log(
+                "HIT A LOOP",
+                res.id,
+                _parents.map((p) => p.id)
+              );
+              // console.log(
+              //   "completing!",
+              //   _parents.map((p) => p.id),
+              //   result.id
+              // );
+              return { document: res, parents: {} } as ParentResult;
+            }
+
+            console.log("resolving one level up using", res);
+            _parents.push(res);
+            return {
+              ...accumulated,
+              parents: {
+                ...accumulated.parents,
+                [parentCollection]: await resolveParents(res.id, parentCollection, null, _parents),
+              },
+            };
+            // return await resolveParents(res.id, parentCollection, null, _parents);
+          });
+
+          const subResults = (await Promise.all(promises)).filter(Boolean);
+          // console.log("subREsults", subResults);
+          if (subResults.length === 0) return null;
+          return subResults;
+
+          // accumulated = {
+          //   ...accumulated,
+          //   parents: {
+          //     ...accumulated.parents,
+          //     [parentCollection]: subResults,
+          //   },
+          // };
+          // return accumulated;
+
+          // }
         });
 
-        const subResults = await Promise.all(promises);
+      const res = (await Promise.all(promises)).filter(Boolean);
 
-        accumulated = {
-          ...accumulated,
-          parents: {
-            ...accumulated.parents,
-            [parentCollection]: subResults,
-          },
-        };
-        return accumulated;
-      }
-    }
-  }
+      if (res.length === 0) return null;
+      return res;
+      // return res.filter(Boolean);
+      return {
+        ...accumulated,
+        parents: {
+          ...accumulated.parents,
+          [parentCollection]: res,
+        },
+      };
 
-  return accumulated;
+      // }
+    });
+
+  const bigres = (await Promise.all(bigPromises)).filter(Boolean).filter((r) => r.length > 0);
+  if (bigres.length === 0) return null;
+
+  // console.log("WHAT is BIEGRES", JSON.stringify(bigres, null, 2));
+  return bigres;
+  return {
+    ...accumulated,
+    parents: {
+      ...accumulated.parents,
+      ["UHH"]: bigres,
+    },
+  };
+  // return bigres.filter((r) => r.length > 0);
 };
 
-let rootSearchCount = 0;
+let childRootSearchCount = 0;
 const resolveChildren = async (searchTermOrTerms, collection, field = null, _parent = null) => {
   const currentField = field || "id";
   const results = await query(collection).where(currentField, searchTermOrTerms).get();
 
   const promises = results.map(async (result) => {
     // if the result hits the original search id the second time, stop
-    const skip = result.id === _parent?.id || rootSearchCount > 1;
+    const skip = result.id === _parent?.id || childRootSearchCount > 1;
     if (_parent === null) {
       _parent = result;
     }
     if (result.id === _parent?.id) {
-      rootSearchCount++;
+      childRootSearchCount++;
     }
 
     // first level
@@ -317,10 +470,13 @@ const searchCol = "reports";
 
 Promise.all([resolveParents(searchId, searchCol), resolveChildren(searchId, searchCol)]).then(
   ([parents, children]) => {
-    console.log("parents:");
-    [parents].forEach((res) => printTree(res));
+    console.log(`parents: (... uses ${searchId}):`);
+    // console.log(parents);
+    console.log(JSON.stringify(parents, null, 2));
+    // parents.forEach((res) => printTree(res));
     console.log("----------");
-    console.log("children:");
-    children.forEach((res) => printTree(res));
+    console.log(`children: (${searchId} uses ...)`);
+    console.log(children);
+    // children.forEach((res) => printTree(res));
   }
 );
