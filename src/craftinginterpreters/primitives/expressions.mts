@@ -61,30 +61,3 @@ export const Expr = {
   Literal: literal,
   Unary: unary,
 };
-
-// import { TokenType } from "./types.mjs";
-// const testrun = () => {
-//   const testExpression = Expr.Binary(
-//     Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
-//     new Token(TokenType.STAR, "*", null, 1),
-//     Expr.Grouping(Expr.Literal(45.67))
-//   );
-
-//   console.log(printAST(testExpression));
-//   // should produce (* (- 123) (group 45.67))
-
-//   const testExpression2 = Expr.Binary(
-//     Expr.Grouping(
-//       Expr.Binary(Expr.Literal(1), new Token(TokenType.PLUS, "+", null, 1), Expr.Literal(2))
-//     ),
-//     new Token(TokenType.STAR, "*", null, 1),
-//     Expr.Grouping(
-//       Expr.Binary(Expr.Literal(4), new Token(TokenType.MINUS, "-", null, 1), Expr.Literal(3))
-//     )
-//   );
-
-//   console.log(printAST(testExpression2, PrintStyle.rpn));
-//   // should produce 1 2 + 4 3 - *
-// };
-
-// testrun();
