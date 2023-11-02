@@ -19,14 +19,14 @@ export enum TokenType {
   NUMBER = "NUMBER",
 
   // dts editable values
-  KEYMAP_ENTRIES = "KEYMAP_ENTRIES",
+  // KEYMAP_ENTRIES = "KEYMAP_ENTRIES",
   // Keywords.
-  IMPORT = "IMPORT",
-  KEYMAP = "KEYMAP",
-  DEFAULT_LAYER = "default_layer",
-  BINDINGS = "bindings",
-  SENSOR_BINDINGS = "sensor_bindings",
-  COMPATIBLE = "compatible",
+  // IMPORT = "IMPORT",
+  // KEYMAP = "KEYMAP",
+  // DEFAULT_LAYER = "default_layer",
+  // BINDINGS = "bindings",
+  // SENSOR_BINDINGS = "sensor_bindings",
+  // COMPATIBLE = "compatible",
 
   LEFT_PAREN = "LEFT_PAREN",
   RIGHT_PAREN = "RIGHT_PAREN",

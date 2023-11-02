@@ -31,11 +31,11 @@ export class Token {
 }
 
 export const keywords = {
-  keymap: TokenType.KEYMAP,
-  default_layer: TokenType.DEFAULT_LAYER,
-  bindings: TokenType.BINDINGS,
-  sensor_bindings: TokenType.SENSOR_BINDINGS,
-  compatible: TokenType.COMPATIBLE,
+  // keymap: TokenType.KEYMAP,
+  // default_layer: TokenType.DEFAULT_LAYER,
+  // bindings: TokenType.BINDINGS,
+  // sensor_bindings: TokenType.SENSOR_BINDINGS,
+  // compatible: TokenType.COMPATIBLE,
   print: TokenType.PRINT,
 
   false: TokenType.FALSE,
