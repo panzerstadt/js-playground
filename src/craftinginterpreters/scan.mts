@@ -142,17 +142,12 @@ export class Scanner {
       case '"': // only doublequotes
         this.string();
         break;
-      case "<": // dts keymaps
-        this.keymap();
-        break;
 
       default:
         if (this.isDigit(c)) {
           this.number();
         } else if (this.isAlpha(c)) {
           this.identifier();
-        } else if (c === "#") {
-          this.import();
         } else {
           // Note that the erroneous character is still consumed
           // by the earlier call to advance(). That’s important
@@ -212,28 +207,6 @@ export class Scanner {
     const value = this.source.substring(this.start + 1, this.current - 1);
     this.addToken(TokenType.STRING, value);
   }
-  private keymap() {
-    while (this.peek() !== ">" && !this.isAtEnd()) {
-      if (this.peek() == "\n") {
-        this.line = this.line + 1;
-      }
-      this.advance();
-    }
-
-    if (this.isAtEnd()) {
-      const msg = `Unterminated keymap entries: "${this.source[this.current - 1]}"`;
-      this._error.error(this.line, msg, this.source, this.current);
-      return;
-    }
-
-    // the closing >
-    this.advance();
-
-    // trim surrounding quotes
-    const value = this.source.substring(this.start + 1, this.current - 1);
-    const cleanedValue = value.replace(/\n/g, " ").replace(/\t/g, " ").replace(/\s+/g, " ").trim();
-    this.addToken(TokenType.KEYMAP_ENTRIES, cleanedValue);
-  }
   private number() {
     while (this.isDigit(this.peek())) {
       this.advance();
@@ -264,13 +237,6 @@ export class Scanner {
       identifierType = TokenType.IDENTIFIER;
     }
     this.addToken(identifierType);
-  }
-  private import() {
-    // dts module imports.
-    while (this.peek() !== "\n" && !this.isAtEnd()) {
-      this.advance();
-    }
-    this.addToken(TokenType.IMPORT);
   }
 
   // types
