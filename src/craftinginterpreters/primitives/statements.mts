@@ -1,3 +1,4 @@
+import { Token } from "../token.mjs";
 import { AnyExpr } from "./expressions.mjs";
 
 interface Expression {
@@ -18,12 +19,24 @@ const print = (expression: AnyExpr): Print => {
   return { type: "print", expression };
 };
 
-export type AnyStmt = Expression | Print;
+interface Let {
+  readonly type: "let";
+  readonly name: Token;
+  readonly initializer: AnyExpr;
+}
+
+const letStmt = (name: Token, initializer: AnyExpr): Let => {
+  return { type: "let", name, initializer };
+};
+
+export type AnyStmt = Expression | Print | Let;
 export interface Stmt {
   Expression: Expression;
   Print: Print;
+  Let: Let;
 }
 export const Stmt = {
   Expression: expression,
   Print: print,
+  Let: letStmt,
 };

@@ -4,6 +4,7 @@ import { Lox } from "./lox.mjs";
 
 const lox = new Lox();
 
-const initialTest = "print 0 + 3 / (2 * 5);";
+// const initialTest = "print 0 + 3 / (2 * 5);";
+const initialTest = `let test = "hello world";`;
 console.log("running initial test of: ", initialTest);
 lox.run(initialTest, true);

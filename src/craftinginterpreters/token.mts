@@ -37,6 +37,7 @@ export const keywords = {
   // sensor_bindings: TokenType.SENSOR_BINDINGS,
   // compatible: TokenType.COMPATIBLE,
   print: TokenType.PRINT,
+  let: TokenType.LET,
 
   false: TokenType.FALSE,
   true: TokenType.TRUE,

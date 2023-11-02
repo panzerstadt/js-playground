@@ -124,6 +124,8 @@ export const printAST = (expr: AnyExpr, style = PrintStyle.parenthesis, padLeft 
       //   return parenthesize(expr.operator.lexeme, expr.right);
       // }
       return process(expr.operator.lexeme, expr.right);
+    case "variable":
+      return `variable '${expr.name.lexeme}'`;
     default:
       return "UNKNOWN";
   }

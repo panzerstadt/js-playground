@@ -1,3 +1,4 @@
+import { Environment } from "../environment.mjs";
 import { RuntimeError } from "../errors.mjs";
 import { AnyExpr, Expr } from "../primitives/expressions.mjs";
 import { AnyStmt, Stmt } from "../primitives/statements.mjs";
@@ -6,6 +7,8 @@ import { TokenType } from "../types.mjs";
 import { PrintStyle, printAST } from "./pprinter.mjs";
 
 export class Interpreter {
+  private environment = new Environment();
+
   public interpret(statements: AnyStmt[], debug?: boolean) {
     try {
       for (const statement of statements) {
@@ -24,9 +27,12 @@ export class Interpreter {
         return this.visitExpressionStmt(stmt, debug);
       case "print":
         return this.visitPrintStmt(stmt, debug);
+      case "let":
+        return this.visitLetStmt(stmt, debug);
     }
 
     // unreachable
+    console.error(`reached unreachable code at '${this.evaluate.name}'!`);
     return null;
   }
 
@@ -41,9 +47,12 @@ export class Interpreter {
         return this.visitLiteralExpr(expr);
       case "unary":
         return this.visitUnaryExpr(expr);
+      case "variable":
+        return this.visitVariableExpr(expr);
     }
 
     // unreachable
+    console.error(`reached unreachable code at '${this.evaluate.name}'!`);
     return null;
   }
 
@@ -82,6 +91,9 @@ export class Interpreter {
     throw new RuntimeError(operator, "Cannot divide by zero");
   }
 
+  /**
+   * EXPRESSIONS (Primitives)
+   */
   // literal is leaf node of the expression, it holds the value
   public visitLiteralExpr(expr: Expr["Literal"]): Object | number {
     return expr.value;
@@ -158,20 +170,13 @@ export class Interpreter {
     return null;
   }
 
-  debugStatement(stmt: AnyStmt) {
-    console.log("lisp-like: ", printAST(stmt.expression, PrintStyle.parenthesis));
-    console.log("- - - - -");
-    console.log("rpn      : ", printAST(stmt.expression, PrintStyle.rpn));
-    console.log("- - - - -");
-    console.log("ast      :\n", printAST(stmt.expression, PrintStyle.ast));
-    console.log("- - - - -");
-    console.log(
-      "ast(json):\n",
-      JSON.stringify(printAST(stmt.expression, PrintStyle.json), null, 3)
-    );
-    console.log(" ");
+  public visitVariableExpr(expr: Expr["Variable"]): Object {
+    return this.environment.get(expr.name);
   }
 
+  /**
+   * STATEMENTS (Primitives)
+   */
   public visitExpressionStmt(stmt: Stmt["Expression"], debug = false): void {
     debug && this.debugStatement(stmt);
 
@@ -185,5 +190,31 @@ export class Interpreter {
 
     debug && console.log("Interpreted Output:");
     console.log(">>", value);
+  }
+
+  public visitLetStmt(stmt: Stmt["Let"], debug?: boolean): void {
+    debug && this.debugStatement(stmt);
+
+    let value = null;
+    if (stmt.initializer !== null) {
+      value = this.evaluate(stmt.initializer);
+    }
+
+    this.environment.define(stmt.name.lexeme, value);
+    return null;
+  }
+
+  debugStatement(stmt: AnyStmt) {
+    // @ts-ignore
+    let expr: AnyExpr = stmt.expression || stmt.initializer;
+
+    console.log("lisp-like: ", printAST(expr, PrintStyle.parenthesis));
+    console.log("- - - - -");
+    console.log("rpn      : ", printAST(expr, PrintStyle.rpn));
+    console.log("- - - - -");
+    console.log("ast      :\n", printAST(expr, PrintStyle.ast));
+    console.log("- - - - -");
+    console.log("ast(json):\n", JSON.stringify(printAST(expr, PrintStyle.json), null, 3));
+    console.log(" ");
   }
 }

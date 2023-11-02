@@ -8,7 +8,7 @@ import { TokenType } from "./types.mjs";
 Scanner = reads characters left to right
 Parser = reads Tokens left to right
 ------
-Expression Grammar for this parser (BNF) (subset of statement grammar)
+Expression Grammar for this parser in Backus-Naur Form (BNF) (subset of statement grammar)
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -17,16 +17,20 @@ factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" ;
+               | "(" expression ")" | IDENTIFIER ;
 -------
 Statement Grammar for this parser (BNF) (superset)
-program        → statement* EOF ;
+program        → declaration* EOF ;
+
+declaration    → varDecl // variables for now, functions and classes later
+               | statement ;
 
 statement      → exprStmt
                | printStmt ;
 
 exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;   
+varDecl        → "let" IDENTIFIER ( "=" expression )? ";"
 
 program represents a complete Lox script/repl entry.
 a Program = a list of statements followed by an End-Of-File token
@@ -160,6 +164,10 @@ export class Parser {
       return Expr.Literal(this.previous().literal);
     }
 
+    if (this.match(TokenType.IDENTIFIER)) {
+      return Expr.Variable(this.previous());
+    }
+
     // if this turns out to be the start of a group
     if (this.match(TokenType.LEFT_PAREN)) {
       // make an expression
@@ -173,10 +181,10 @@ export class Parser {
     throw this.error(this.peek(), "Expect expression.");
   }
 
-  private consume(type: TokenType, message: string): Token {
+  private consume(type: TokenType, expectsMessage: string): Token {
     if (this.check(type)) return this.advance();
 
-    throw this.error(this.peek(), message);
+    throw this.error(this.peek(), expectsMessage);
   }
 
   // these are STATIC errors: ERRORTYPE.STATIC
@@ -230,10 +238,53 @@ export class Parser {
     return Stmt.Expression(expr);
   }
 
+  private varDeclaration() {
+    const name = this.consume(TokenType.IDENTIFIER, "Expect variable name");
+    let initializer: AnyExpr = null;
+    if (this.match(TokenType.EQUAL)) {
+      initializer = this.expression();
+    }
+
+    this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+    return Stmt.Let(name, initializer);
+  }
+
   private statement(): AnyStmt {
     if (this.match(TokenType.PRINT)) return this.printStatement();
 
     return this.expressionStatement();
+  }
+
+  private declaration(): AnyStmt {
+    try {
+      if (this.match(TokenType.LET)) return this.varDeclaration();
+
+      return this.statement();
+    } catch (_) {
+      /**
+       * Why synchronize here?
+       *
+       * This declaration() method is the method we call repeatedly
+       * when parsing a series of statements in a block or a script,
+       * so it’s the right place to synchronize when the parser goes
+       * into panic mode. The whole body of this method is wrapped
+       * in a try block to catch the exception thrown when the parser
+       * begins error recovery. This gets it back to trying to parse
+       * the beginning of the next statement or declaration.
+       *
+       * TLDR -> this basically tries to skip the problematic statement
+       *         and try the next statement (skips till ";" then continues)
+       */
+      this.synchronize();
+      // TODO: future: so instead of synchronize, we could add
+      // a layer in front to try fix the syntax by passing
+      // the offending statement to an LLM and asking for
+      // suggestions. we then wait for user prompt to confirm
+      // if that's what they meant. at this point, the user
+      // is also allowed to fix the code themselves OR exit out
+      // of the parsing phase
+      return null;
+    }
   }
 
   /**
@@ -244,13 +295,13 @@ export class Parser {
     try {
       const statements = [];
       while (!this.isAtEnd()) {
-        statements.push(this.statement());
+        statements.push(this.declaration());
       }
 
       if (debug) {
         statements.forEach((stmt) => {
           // console.log("\nparse tree (json):\n", JSON.stringify(expression, null, 4));
-          console.log("parse tree (json):\n", stmt.expression);
+          console.log("parse tree (json):\n", stmt);
         });
       }
 

@@ -48,16 +48,27 @@ const unary = (operator: Token, right: AnyExpr): Unary => {
   return { type: "unary", operator, right };
 };
 
-export type AnyExpr = Binary | Grouping | Literal | Unary;
+interface Variable {
+  readonly type: "variable";
+  readonly name: Token;
+}
+
+const variable = (name: Token): Variable => {
+  return { type: "variable", name };
+};
+
+export type AnyExpr = Binary | Grouping | Literal | Unary | Variable;
 export interface Expr {
   Binary: Binary;
   Grouping: Grouping;
   Literal: Literal;
   Unary: Unary;
+  Variable: Variable;
 }
 export const Expr = {
   Binary: binary,
   Grouping: grouping,
   Literal: literal,
   Unary: unary,
+  Variable: variable,
 };
