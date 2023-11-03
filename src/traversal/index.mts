@@ -107,59 +107,6 @@ const db = {
   ],
 };
 
-const smldb = {
-  // instances: [
-  //   {
-  //     id: "root-parent-id",
-  //     projects: ["project 55"],
-  //   },
-  // ],
-  projects: [
-    {
-      name: "project 55",
-      id: "id55",
-      pages: ["id1"],
-    },
-  ],
-  reports: [
-    //TODO:
-    /**
-     * viz:id99
-     *    reports:id1
-     */
-    {
-      id: "id1",
-      key: "foo",
-      creator: "userA",
-      teams: ["one", "two"],
-      viz_id: "id99",
-    },
-    // {
-    //   id: "id7",
-    //   key: "foo",
-    //   creator: "userD",
-    //   teams: ["one"],
-    //   viz_id: "id99",
-    // },
-  ],
-  visualizations: [
-    {
-      name: "visualization 99",
-      id: "id99",
-      creator: "id2",
-      owners: ["userA", "userB"],
-      reports: ["id1", "id7"],
-    },
-    {
-      name: "visualization 88",
-      id: "id88",
-      creator: "id2b",
-      owners: ["userA"],
-      reports: ["id1"],
-    },
-  ],
-};
-
 const query = (col) => {
   const intersectionBetweenArrays = (array1, array2) => array1.filter((x) => array2.includes(x));
 
