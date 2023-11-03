@@ -5,7 +5,7 @@ import { Parser } from "./parser.mjs";
 import { Scanner } from "./scan.mjs";
 import prompt from "prompt-sync";
 
-export class Lox {
+export class BabyJs {
   hadError = false;
   hadRuntimeError = false;
 
