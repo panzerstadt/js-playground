@@ -373,32 +373,36 @@ const resolveChildren = async (searchTermOrTerms, collection, field = null, _par
   return await Promise.all(promises);
 };
 
-const printTree = (result: BothResult, rootKey = "root", prevWidth = 0) => {
+const prettifyTree = (acc = null, result: BothResult, rootKey = "root", prevWidth = 0) => {
   let parentWidth = prevWidth;
   // print parent
 
   let padParentWidth = new Array(parentWidth).join(" ");
-  let collection = ""; // TODO: (${collection})
+  let collection = "";
   // print root
-  console.log(`${padParentWidth}${rootKey}${collection}:${result.document.id}`);
+  let output = `${padParentWidth}${rootKey}${collection}:${result.document.id}\n`;
 
   // print parents
   if (result.parents) {
     const parentEntries = Object.entries(result.parents);
-    parentEntries.forEach(([key, results]) => {
-      // console.log("logging", key, results);
-      results.forEach((res) => printTree(res, key, parentWidth + 4));
-    });
+    output += parentEntries
+      .map(([key, results]) =>
+        results.map((res) => prettifyTree(output, res, key, parentWidth + 4)).join("")
+      )
+      .join("");
   }
 
   // print children
   if (result.children) {
     const childEntries = Object.entries(result.children);
-    childEntries.forEach(([key, results]) => {
-      results.forEach((res) => printTree(res, key, parentWidth + 8));
-      // console.log(`${padParentWidth}${key}:${entry.document.id}`);
-    });
+    output += childEntries
+      .map(([key, results]) =>
+        results.map((res) => prettifyTree(acc, res, key, parentWidth + 8)).join("")
+      )
+      .join("");
   }
+
+  return output;
 };
 
 const searchId = "id1";
@@ -410,10 +414,12 @@ Promise.all([resolveParents(searchId, searchCol), resolveChildren(searchId, sear
     console.log(`parents: (... uses ${searchId}):`);
     // console.log(parents);
     // console.log(JSON.stringify(parents, null, 2));
-    [parents].forEach((res) => printTree(res));
+    console.log(prettifyTree(null, parents));
+    // [parents].forEach((res) => prettifyTree(res));
     console.log("----------");
     console.log(`children: (${searchId} uses ...)`);
     // console.log(children);
-    children.forEach((res) => printTree(res));
+    const child = children[0];
+    console.log(prettifyTree(null, child));
   }
 );
