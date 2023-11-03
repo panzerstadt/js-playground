@@ -224,12 +224,12 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
       if (DEBUG) {
         if (willTraverse) {
-        console.log(
-          `will traverse '${parentCollection}' because it uses '${searchCol}' in its field: ${relatedToSearchCollection.map(
+          console.log(
+            `will traverse '${parentCollection}' because it uses '${searchCol}' in its field: ${relatedToSearchCollection.map(
               (entry) =>
                 `"${entry[0]}" refers to ${JSON.stringify(entry[1])} in ${parentCollection}`
-          )}`
-        );
+            )}`
+          );
         } else {
           console.log(
             `will not traverse '${parentCollection}' because no relationship found with '${searchCol}'`
@@ -257,39 +257,44 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
           // hydrate that relationship
           const searchTerm = rootDocument[relField] ?? searchId;
-          // FIXME: there can be more than one document that refer to root document (e.g. 2 viz docs pointing to one report). this hasn't been captured in the implementation
           const results = await query(parentCollection).where(fkName, searchTerm).get();
           if (results.length === 0) return { [parentCollection]: [] } as ParentResult["parents"];
 
-          const result = results[0]; // FIXME: make it work for multiple results (e.g. id88 visualization 88)
+          const parentsPromises = results.map(async (result) => {
+            const skip = _parents.some((p) => p.id === result.id) && parentRootSearchCount > 1;
+            if (skip) {
+              DEBUG &&
+                console.log(`HIT A LOOP: ${result.id} found in [${_parents.map((p) => p.id)}]`);
 
-          const skip = _parents.some((p) => p.id === result.id) && parentRootSearchCount > 1;
-          if (skip) {
-            DEBUG &&
-              console.log(
-                "HIT A LOOP",
-                result.id,
-                _parents.map((p) => p.id)
-              );
+              // return the duplicate (root) document with no parents
+              return { document: result, parents: {} };
+            }
 
-            // return the duplicate (root) document with no parents
-            return {
-              [parentCollection]: [{ document: result, parents: {} }],
-            } as ParentResult["parents"];
-          }
+            DEBUG && console.log("resolving one level up for the result", result);
+            _parents.push(result);
 
-          DEBUG && console.log("resolving one level up using", result);
-          _parents.push(result);
+            return await resolveParents(result.id, parentCollection, null, _parents);
+          });
+
+          const parentResults = await Promise.all(parentsPromises);
 
           return {
-            [parentCollection]: [await resolveParents(result.id, parentCollection, null, _parents)],
+            [parentCollection]: parentResults,
           } as ParentResult["parents"];
         });
 
-      const parents = (await Promise.all(relationshipPromises)) as ParentResult["parents"][];
+      const parents = (await Promise.all(relationshipPromises)).reduce((acc, current) => {
+        const [parentCollectionKey] = Object.keys(current);
+        if (acc[parentCollectionKey]) {
+          acc[parentCollectionKey].push(...current[parentCollectionKey]);
+        } else {
+          acc[parentCollectionKey] = current[parentCollectionKey];
+        }
 
-      if (parents.length === 0) return {};
-      return parents[0];
+        return acc;
+      }, {});
+
+      return parents as ParentResult["parents"];
     });
 
   const resolvedParents = await Promise.all(parentPromises);
