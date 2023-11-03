@@ -275,12 +275,19 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
       const willTraverse = relatedToSearchCollection.length > 0;
 
-      if (willTraverse && DEBUG) {
+      if (DEBUG) {
+        if (willTraverse) {
         console.log(
           `will traverse '${parentCollection}' because it uses '${searchCol}' in its field: ${relatedToSearchCollection.map(
-            (entry) => `"${entry[0]}" refers to ${JSON.stringify(entry[1])} in ${parentCollection}`
+              (entry) =>
+                `"${entry[0]}" refers to ${JSON.stringify(entry[1])} in ${parentCollection}`
           )}`
         );
+        } else {
+          console.log(
+            `will not traverse '${parentCollection}' because no relationship found with '${searchCol}'`
+          );
+        }
       }
 
       return willTraverse;
