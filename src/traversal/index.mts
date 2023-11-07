@@ -321,18 +321,29 @@ const resolveParents = async (
   } as ParentResult;
 };
 
+let __childrenloop = 0;
 let childRootSearchCount = 0;
-const resolveChildren = async (searchTermOrTerms, collection, field = null, _parent = null) => {
+const resolveChildren = async (
+  searchTermOrTerms: string,
+  collection: string,
+  field = null,
+  _parents = [],
+  debug?: boolean
+) => {
+  __childrenloop++;
+  if (__childrenloop > 100) {
+    throw new Error("infinite loop detected at resolveChildren()");
+  }
   const currentField = field || "id";
   const results = await query(collection).where(currentField, searchTermOrTerms).get();
 
   const promises = results.map(async (result) => {
     // if the result hits the original search id the second time, stop
-    const skip = result.id === _parent?.id || childRootSearchCount > 1;
-    if (_parent === null) {
-      _parent = result;
+    // console.log("parents", _parents);
+    if (_parents.length === 0) {
+      _parents.push(result);
     }
-    if (result.id === _parent?.id) {
+    if (_parents.some((p) => p.id === result.id)) {
       childRootSearchCount++;
     }
 
@@ -352,19 +363,15 @@ const resolveChildren = async (searchTermOrTerms, collection, field = null, _par
       if (!mapping) continue;
 
       let subResults = [];
+      const skip = _parents.some((p) => p.id === result.id) && childRootSearchCount > 1;
       if (!skip) {
+        _parents.push(result);
         if (typeof mapping !== "string") {
           // object, handle
-          subResults = await resolveChildren(
-            value,
-            mapping.collection,
-            mapping.field,
-
-            _parent
-          );
+          subResults = await resolveChildren(value, mapping.collection, mapping.field, _parents);
         } else {
           // mapping is the child collection, value is the id
-          subResults = await resolveChildren(value, mapping, null, _parent);
+          subResults = await resolveChildren(value, mapping, null, _parents);
         }
 
         accumulated = {
@@ -374,6 +381,8 @@ const resolveChildren = async (searchTermOrTerms, collection, field = null, _par
             [field]: subResults as ChildResult[],
           },
         };
+      } else {
+        debug && console.log(`HIT A LOOP: ${result.id} found in [${_parents.map((p) => p.id)}]`);
       }
     }
 
