@@ -184,8 +184,19 @@ interface BothResult extends BaseResult {
   children?: { [key in string]: BothResult[] };
 }
 
+let __parentloop = 0;
 let parentRootSearchCount = 0;
-const resolveParents = async (searchId, searchCol, field = null, _parents = []) => {
+const resolveParents = async (
+  searchId: string,
+  searchCol: string,
+  field = null,
+  _parents = [],
+  debug?: boolean
+) => {
+  __parentloop++;
+  if (__parentloop > 10000) {
+    throw new Error("infinite loop detected at resolveParents()");
+  }
   const relationshipEntryRefersToSearchCol = ([, collectionEntryOrValue]) => {
     let relCollection = "";
     if (typeof collectionEntryOrValue !== "string") {
@@ -222,7 +233,7 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
 
       const willTraverse = relatedToSearchCollection.length > 0;
 
-      if (DEBUG) {
+      if (debug) {
         if (willTraverse) {
           console.log(
             `will traverse '${parentCollection}' because it uses '${searchCol}' in its field: ${relatedToSearchCollection.map(
@@ -263,14 +274,14 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
           const parentsPromises = results.map(async (result) => {
             const skip = _parents.some((p) => p.id === result.id) && parentRootSearchCount > 1;
             if (skip) {
-              DEBUG &&
+              debug &&
                 console.log(`HIT A LOOP: ${result.id} found in [${_parents.map((p) => p.id)}]`);
 
               // return the duplicate (root) document with no parents
               return { document: result, parents: {} };
             }
 
-            DEBUG && console.log("resolving one level up for the result", result);
+            debug && console.log("resolving one level up for the result", result);
             _parents.push(result);
 
             return await resolveParents(result.id, parentCollection, null, _parents);
@@ -300,7 +311,7 @@ const resolveParents = async (searchId, searchCol, field = null, _parents = []) 
   const resolvedParents = await Promise.all(parentPromises);
   if (resolvedParents.length === 0) return accumulated;
 
-  const parentEntries = resolvedParents.reduce((acc, parent) => {
+  const parentEntries = resolvedParents.reduce((acc: any, parent: any) => {
     return { ...acc, ...parent };
   }, {});
 
