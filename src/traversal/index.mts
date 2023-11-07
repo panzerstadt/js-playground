@@ -429,17 +429,18 @@ const searchId = "id1";
 const searchCol = "reports";
 // search...
 
-Promise.all([resolveParents(searchId, searchCol), resolveChildren(searchId, searchCol)]).then(
-  ([parents, children]) => {
-    console.log(`parents: (... uses ${searchId}):`);
-    // console.log(parents);
-    // console.log(JSON.stringify(parents, null, 2));
-    console.log(prettifyTree(null, parents));
-    // [parents].forEach((res) => prettifyTree(res));
-    console.log("----------");
-    console.log(`children: (${searchId} uses ...)`);
-    // console.log(children);
-    const child = children[0];
-    console.log(prettifyTree(null, child));
-  }
-);
+Promise.all([
+  resolveParents(searchId, searchCol, null, [], DEBUG),
+  resolveChildren(searchId, searchCol, null, [], DEBUG),
+]).then(([parents, children]) => {
+  console.log(`parents: (... uses ${searchId}):`);
+  // console.log(parents);
+  // console.log(JSON.stringify(parents, null, 2));
+  console.log(prettifyTree(null, parents));
+  // [parents].forEach((res) => prettifyTree(res));
+  console.log("----------");
+  console.log(`children: (${searchId} uses ...)`);
+  // console.log(children);
+  const child = children[0];
+  console.log(prettifyTree(null, child));
+});
