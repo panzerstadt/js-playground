@@ -1,5 +1,4 @@
-const DEBUG = false;
-
+// @ts-nocheck
 const relationships = {
   reports: {
     creator: { collection: "users", field: "name" },
@@ -21,6 +20,30 @@ const relationships = {
     projects: { collection: "projects", field: "name" },
   },
 } as const;
+
+export const displayRelationships = `
+{
+    reports: {
+      creator: { collection: "users", field: "name" },
+      teams: { collection: "teams", field: "key" },
+      viz_id: "visualizations",
+    },
+    visualizations: {
+      creator: "users",
+      owners: { collection: "users", field: "name" },
+      reports: "reports",
+    },
+    teams: {
+      users: "users",
+    },
+    projects: {
+      pages: "reports",
+    },
+    instances: {
+      projects: { collection: "projects", field: "name" },
+    },
+}
+`;
 
 // go through all relationships, look for direct relationships to the root, in this case 'reports'
 /**
@@ -107,19 +130,98 @@ const db = {
   ],
 };
 
-const query = (col) => {
-  const intersectionBetweenArrays = (array1, array2) => array1.filter((x) => array2.includes(x));
+export const displayDb = `
+{
+    instances: [
+      {
+        id: "root-parent-id",
+        projects: ["project 55"],
+      },
+    ],
+    projects: [
+      {
+        name: "project 55",
+        id: "id55",
+        pages: ["id1"],
+      },
+    ],
+    reports: [
+      {
+        id: "id1",
+        key: "foo",
+        creator: "userA",
+        teams: ["one", "two"],
+        viz_id: "id99",
+      },
+      {
+        id: "id7",
+        key: "foo",
+        creator: "userD",
+        teams: ["one"],
+        viz_id: "id99",
+      },
+    ],
+    visualizations: [
+      {
+        name: "visualization 99",
+        id: "id99",
+        creator: "id2",
+        owners: ["userA", "userB"],
+        reports: ["id1", "id7"],
+      },
+      {
+        name: "visualization 88",
+        id: "id88",
+        creator: "id2b",
+        owners: ["userA"],
+        reports: ["id1"],
+      },
+    ],
+    teams: [
+      {
+        id: "id3",
+        key: "one",
+        name: "Team One",
+        users: ["id2", "id2b"],
+      },
+      {
+        id: "id4",
+        key: "two",
+        name: "Team Two",
+        users: ["id2c"],
+      },
+    ],
+    users: [
+      {
+        id: "id2",
+        name: "userA",
+      },
+      {
+        id: "id2b",
+        name: "userB",
+      },
+      {
+        id: "id2c",
+        name: "userC",
+      },
+    ],
+}
+`;
+
+const query = (col: string) => {
+  const intersectionBetweenArrays = (array1: any[], array2: string | any[]) =>
+    array1.filter((x: any) => array2.includes(x));
 
   return {
-    where(fieldType, searchValueOrValues) {
+    where(fieldType: string, searchValueOrValues: string | any[]) {
       const collection = db[col];
 
-      let result = [];
+      let result: any[] = [];
 
       if (collection) {
         // console.log(`ORM: collection found: collection:${col} has ${collection[0].id}!`);
         // console.log(`ORM: query: where ${searchValueOrValues} in ${fieldType}`);
-        result = collection.filter((doc) => {
+        result = collection.filter((doc: { [x: string]: any }) => {
           const valueOrValuesInCollection = doc[fieldType];
           // console.log("doc fieltype", doc, fieldType, doc[fieldType]);
           if (Array.isArray(searchValueOrValues)) {
@@ -331,7 +433,7 @@ const resolveChildren = async (
   debug?: boolean
 ) => {
   __childrenloop++;
-  if (__childrenloop > 100) {
+  if (__childrenloop > 10000) {
     throw new Error("infinite loop detected at resolveChildren()");
   }
   const currentField = field || "id";
@@ -407,7 +509,7 @@ const prettifyTree = (acc = null, result: BothResult, rootKey = "root", prevWidt
     const parentEntries = Object.entries(result.parents);
     output += parentEntries
       .map(([key, results]) =>
-        results.map((res) => prettifyTree(output, res, key, parentWidth + 4)).join("")
+        results.map((res) => prettifyTree(output, res, key, parentWidth + 8)).join("")
       )
       .join("");
   }
@@ -417,7 +519,7 @@ const prettifyTree = (acc = null, result: BothResult, rootKey = "root", prevWidt
     const childEntries = Object.entries(result.children);
     output += childEntries
       .map(([key, results]) =>
-        results.map((res) => prettifyTree(acc, res, key, parentWidth + 8)).join("")
+        results.map((res) => prettifyTree(output, res, key, parentWidth + 8)).join("")
       )
       .join("");
   }
@@ -425,22 +527,30 @@ const prettifyTree = (acc = null, result: BothResult, rootKey = "root", prevWidt
   return output;
 };
 
-const searchId = "id1";
-const searchCol = "reports";
-// search...
+export const traverse = async (searchId, searchCol, debug?: boolean) => {
+  debug && console.log(`-------------TRAVERSAL START:-------------`);
+  __parentloop = 0;
+  __childrenloop = 0;
+  childRootSearchCount = 0;
+  parentRootSearchCount = 0;
 
-Promise.all([
-  resolveParents(searchId, searchCol, null, [], DEBUG),
-  resolveChildren(searchId, searchCol, null, [], DEBUG),
-]).then(([parents, children]) => {
-  console.log(`parents: (... uses ${searchId}):`);
-  // console.log(parents);
-  // console.log(JSON.stringify(parents, null, 2));
-  console.log(prettifyTree(null, parents));
-  // [parents].forEach((res) => prettifyTree(res));
-  console.log("----------");
-  console.log(`children: (${searchId} uses ...)`);
-  // console.log(children);
-  const child = children[0];
-  console.log(prettifyTree(null, child));
-});
+  return await Promise.all([
+    resolveParents(searchId, searchCol, null, [], debug),
+    resolveChildren(searchId, searchCol, null, [], debug),
+  ])
+    .then(([parents, children]) => {
+      let output = [];
+      output.push(`parents - documents depending on '${searchId}':\n`);
+      output.push(...prettifyTree(null, parents).split("\n"));
+      output.push("----------\n");
+      output.push(`children - '${searchId}' depends on these documents':\n`);
+      const child = children[0];
+      console.log("parents, children", parents, child);
+      output.push(...prettifyTree(null, child).split("\n"));
+
+      return output;
+    })
+    .catch((e) => {
+      return [e.message];
+    });
+};
